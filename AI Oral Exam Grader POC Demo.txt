@@ -1,9 +1,13 @@
+/*
+ [CURRENT NOTE 1/7]: Grader does not yet implement an LLM. However, framework is in place to bring that on. 
+ For now grading seems to focus on overall length of answer and use of key-words. As you can see below, I answered the question myself off the top of my head and received 85%. The GPT generated answer, which is far better of course, also received 85%. This is just to get us started. 
+*/
+
 AI Oral Exam Grader POC Demo
 
 The following are test questions that I will organically answer myself to showcase how grading works.
  The follow up will be ideal answers provided by AI to show the difference in grading. 
 
-[1/7 NOTE: So far it seems that the grader is grading on length of answer, it doesn't seem to be very intelligent yet. My answer and GPT's answer should not be receiving the same grade.]
 
 Question
 Question 1: Explain the fundamental principles of data structures. Discuss the differences between arrays and linked lists, and when you would use each.
@@ -12,7 +16,7 @@ Grading Rubric
 Grading criteria: (1) Understanding of arrays - 25 points, (2) Understanding of linked lists - 25 points, (3) Comparison and differences - 25 points, (4) Use case examples - 25 points. Total: 100 points.
 
 My Answer (no AI):
-Arrays are a data structure in which you can store values in "slots" that are interconnected within the array. An array can store a native data type or refferences to objects. An array can be looped through starting from the front or back of the array. Certain algorithms like binary search allow for quicker and less costly array traversal.
+Arrays are a data structure in which you can store values in "slots" that are interconnected within the array. An array can store a native data type or references to objects. An array can be looped through starting from the front or back of the array. Certain algorithms like binary search allow for quicker and less costly array traversal.
 
 Linked lists are similar however are comprised of nodes. Each list has a head node and a tail node. The list can be traversed using dynamic variables like current, where the current node has a .next and .prev method allowing for list traversal. it is also possible to create a doubly linked list so it can be traversed in either direction. 
 
