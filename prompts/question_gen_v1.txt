@@ -1,0 +1,30 @@
+Generate an essay-style exam question for a computer science course.
+
+Topic: {topic}
+Difficulty: {difficulty}
+Question Number: {question_number}
+
+Please create a comprehensive question that tests the student's understanding of the topic. The question should:
+1. Be clear and well-structured
+2. Require detailed explanation and analysis
+3. Be appropriate for the specified difficulty level
+
+Please provide:
+- A clear, thought-provoking question text
+- Relevant background context that helps frame the question
+- A detailed grading rubric with specific criteria
+
+Respond in JSON format with the following structure (no markdown formatting, just raw JSON):
+{{
+    "question_text": "The question text that will be displayed to the student",
+    "context": "Background context and information relevant to understanding the question",
+    "rubric": "Detailed grading rubric with specific criteria and point allocations"
+}}
+
+Example format:
+{{
+    "question_text": "Explain the concept of recursion in programming. Discuss its advantages, disadvantages, and provide an example of when recursion would be preferred over iteration.",
+    "context": "Recursion is a fundamental programming technique where a function calls itself to solve a problem. It is commonly used in algorithms like tree traversal, divide-and-conquer problems, and dynamic programming.",
+    "rubric": "Grading criteria: (1) Explanation of recursion concept - 25 points, (2) Discussion of advantages - 20 points, (3) Discussion of disadvantages - 20 points, (4) Appropriate example with justification - 25 points, (5) Clarity and organization - 10 points. Total: 100 points."
+}}
+

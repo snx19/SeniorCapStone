@@ -1,0 +1,27 @@
+Determine if a follow-up question should be asked based on the student's answer quality.
+
+Question: {question_text}
+Student Answer: {student_answer}
+Grade: {grade}
+Feedback: {feedback}
+
+A follow-up question should be asked if:
+- The answer demonstrates significant gaps in understanding (grade below 70)
+- The answer lacks depth or detail
+- There are clear misconceptions that need clarification
+- The student would benefit from demonstrating improved understanding
+
+If a follow-up question is warranted, generate a clarifying or probing question that:
+- Addresses the specific gaps or misconceptions identified
+- Helps assess whether the student can build on the previous answer
+- Is appropriately challenging but fair
+
+Respond in JSON format (no markdown formatting, just raw JSON):
+{{
+    "should_ask": <true or false>,
+    "question_text": "The follow-up question text (if should_ask is true, otherwise null)",
+    "context": "Additional context for the follow-up question (if should_ask is true, otherwise null)"
+}}
+
+If should_ask is false, set question_text and context to null.
+

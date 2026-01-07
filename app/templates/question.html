@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question {{ question_number }} - AI Oral Exam Grader</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="exam-header">
+            <h1>Question {{ question_number }} of {{ total_questions }}</h1>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ (question_number / total_questions * 100) }}%"></div>
+            </div>
+        </div>
+        
+        <div class="question-card">
+            {% if question.context %}
+            <div class="context-box">
+                <h3>Context</h3>
+                <p>{{ question.context }}</p>
+            </div>
+            {% endif %}
+            
+            <div class="question-box">
+                <h2>Question</h2>
+                <p>{{ question.question_text }}</p>
+            </div>
+            
+            {% if question.rubric %}
+            <div class="rubric-box">
+                <h3>Grading Rubric</h3>
+                <p>{{ question.rubric }}</p>
+            </div>
+            {% endif %}
+            
+            <form method="post" action="/api/exam/{{ exam_id }}/answer" class="answer-form">
+                <input type="hidden" name="question_id" value="{{ question.id }}">
+                
+                <div class="form-group">
+                    <label for="answer">Your Answer:</label>
+                    <textarea 
+                        id="answer" 
+                        name="answer" 
+                        rows="10" 
+                        required 
+                        placeholder="Type your answer here..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Submit Answer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+

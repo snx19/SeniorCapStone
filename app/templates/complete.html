@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Complete - AI Oral Exam Grader</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="complete-card">
+            <h1>Exam Complete!</h1>
+            
+            <div class="final-grade-box">
+                <h2>Final Grade: {{ "%.1f"|format(exam.final_grade) }}%</h2>
+                {% if exam.final_explanation %}
+                <div class="explanation-box">
+                    <h3>Explanation</h3>
+                    <p>{{ exam.final_explanation }}</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="questions-summary">
+                <h2>Question Results</h2>
+                {% for question in questions %}
+                <div class="question-result">
+                    <div class="result-header">
+                        <h3>Question {{ question.question_number }}</h3>
+                        <span class="grade-badge">Grade: {{ "%.1f"|format(question.grade or 0) }}%</span>
+                    </div>
+                    
+                    <div class="result-content">
+                        <div class="result-section">
+                            <strong>Question:</strong>
+                            <p>{{ question.question_text }}</p>
+                        </div>
+                        
+                        <div class="result-section">
+                            <strong>Your Answer:</strong>
+                            <p>{{ question.student_answer or "No answer provided" }}</p>
+                        </div>
+                        
+                        {% if question.feedback %}
+                        <div class="result-section">
+                            <strong>Feedback:</strong>
+                            <p>{{ question.feedback }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="actions">
+                <a href="/" class="btn btn-secondary">Return to Login</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

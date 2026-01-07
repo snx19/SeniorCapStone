@@ -1,0 +1,26 @@
+Calculate the final exam grade based on the student's performance across all questions.
+
+Question Scores: {question_scores}
+
+Feedback Summary: {feedback_summary}
+
+Please analyze the student's overall performance and provide:
+1. A final grade (0-100) that reflects their overall performance
+2. A comprehensive explanation summarizing their strengths and areas for improvement
+3. The list of individual question scores for transparency
+
+Consider:
+- Overall consistency across questions
+- Areas of strength demonstrated
+- Patterns in weaknesses or gaps
+- Overall mastery of the subject matter
+
+The final grade should be a weighted average or adjusted based on performance patterns, but should fairly represent the student's overall understanding.
+
+Respond in JSON format (no markdown formatting, just raw JSON):
+{{
+    "final_grade": <numerical grade from 0.0 to 100.0>,
+    "explanation": "Comprehensive explanation of the final grade, including overall performance summary, key strengths, and areas for improvement",
+    "question_scores": [<list of individual question scores as numbers>]
+}}
+

@@ -1,0 +1,39 @@
+AI Oral Exam Grader POC Demo
+
+The following are test questions that I will organically answer myself to showcase how grading works.
+ The follow up will be ideal answers provided by AI to show the difference in grading. 
+
+[1/7 NOTE: So far it seems that the grader is grading on length of answer, it doesn't seem to be very intelligent yet. My answer and GPT's answer should not be receiving the same grade.]
+
+Question
+Question 1: Explain the fundamental principles of data structures. Discuss the differences between arrays and linked lists, and when you would use each.
+
+Grading Rubric
+Grading criteria: (1) Understanding of arrays - 25 points, (2) Understanding of linked lists - 25 points, (3) Comparison and differences - 25 points, (4) Use case examples - 25 points. Total: 100 points.
+
+My Answer (no AI):
+Arrays are a data structure in which you can store values in "slots" that are interconnected within the array. An array can store a native data type or refferences to objects. An array can be looped through starting from the front or back of the array. Certain algorithms like binary search allow for quicker and less costly array traversal.
+
+Linked lists are similar however are comprised of nodes. Each list has a head node and a tail node. The list can be traversed using dynamic variables like current, where the current node has a .next and .prev method allowing for list traversal. it is also possible to create a doubly linked list so it can be traversed in either direction. 
+
+Often it is easier to use an array to store simplistic native data types or when a 2D array is needed to make a table structure.
+
+Linked lists have an advantage when a list is comprised of values that have different types of objects, Linked lists are often more dynamic
+
+
+
+QUESTION 1 FEEDBACK: 85%
+Your answer is comprehensive and well-developed. You demonstrated good understanding of the topic.
+
+
+
+QUESTION 1 ANSWER (GPT 5.2):
+"Data structures are systematic ways to organize and store data so operations like access, search, insert, delete, and update can be performed efficiently and correctly. The key principles are (1) choosing a representation that matches the operations you need most, (2) understanding time/space tradeoffs (faster operations often cost more memory or vice-versa), and (3) using abstraction (an ADT like “List” can have multiple implementations, and you pick the one that best fits the problem’s constraints). Good data-structure choices reduce algorithmic complexity and make programs more maintainable by enforcing clear rules about how data is arranged and modified. An array stores elements in a contiguous block of memory, which makes random access by index O(1) because the address of a[i] can be computed directly. The tradeoff is that insertions/deletions in the middle are typically O(n) due to shifting elements, and capacity is fixed (or resizing requires allocating a new array and copying). A linked list stores elements as nodes scattered in memory, each with pointers to the next (and possibly previous) node. This makes indexed access O(n) because you must traverse node-by-node, but insertions/deletions can be O(1) once you already have a reference to the node position (especially at the head or after a known node), at the cost of extra pointer memory and worse cache locality. Use arrays when you need frequent indexing, tight memory usage, and fast iteration (e.g., fixed-size collections, tables, buffers, dynamic arrays like ArrayList when mostly appending). Use linked lists when the workload involves frequent insertions/deletions in the middle or near the ends and you don’t need random access (e.g., implementing certain queues/deques, maintaining sequences where you already hold node references). In short: arrays optimize access, linked lists optimize structural changes (given position)."
+
+Feedback 85%:
+Your answer is comprehensive and well-developed. You demonstrated good understanding of the topic.
+
+
+
+
+

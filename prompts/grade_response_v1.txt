@@ -1,0 +1,29 @@
+Grade the following student answer for an exam question.
+
+Question: {question_text}
+
+Context: {context}
+
+Grading Rubric: {rubric}
+
+Student Answer: {student_answer}
+
+Please evaluate the student's answer according to the provided rubric. Consider:
+1. Accuracy and correctness of the information
+2. Completeness in addressing all aspects of the question
+3. Clarity and organization of the response
+4. Use of relevant examples or evidence
+5. Depth of understanding demonstrated
+
+Provide a fair and constructive evaluation that helps the student understand their performance.
+
+Respond in JSON format (no markdown formatting, just raw JSON):
+{{
+    "grade": <numerical grade from 0.0 to 100.0>,
+    "feedback": "Detailed feedback explaining the grade and providing constructive comments",
+    "strengths": ["list", "of", "specific", "strengths", "in", "the", "answer"],
+    "weaknesses": ["list", "of", "specific", "areas", "that", "need", "improvement"]
+}}
+
+The grade should reflect how well the answer addresses the rubric criteria. Be fair but thorough.
+

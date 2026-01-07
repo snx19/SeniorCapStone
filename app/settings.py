@@ -1,0 +1,35 @@
+"""Application settings and configuration."""
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+
+
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables."""
+    
+    # Together.ai API Configuration
+    together_api_key: str = ""
+    llm_model: str = "meta-llama/Llama-3-8b-chat-hf"
+    llm_temperature: float = 0.7
+    llm_max_tokens: int = 2000
+    
+    # Database Configuration
+    database_url: str = "sqlite:///./exam_grader.db"
+    
+    # Application Settings
+    secret_key: str = "change-this-in-production"
+    environment: str = "development"
+    
+    # Exam Configuration
+    exam_question_count: int = 3
+    exam_time_limit_minutes: int = 60
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    """Get cached settings instance."""
+    return Settings()
+
