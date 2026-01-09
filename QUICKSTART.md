@@ -13,20 +13,16 @@
    pip install together
    ```
 
-2. **Set up environment variables (Optional):**
+2. **Set up API key (Optional):**
    - **Note:** The app works perfectly without an API key! It will use pre-written fallback questions and basic grading.
-   - If you want AI-generated questions and AI grading, set up a Together.ai API key:
-     - Copy `.env.example` to `.env` (if you can create it)
-     - Or set environment variables directly:
-       ```bash
-       # Windows PowerShell
-       $env:TOGETHER_API_KEY="your_api_key_here"
-       $env:DATABASE_URL="sqlite:///./exam_grader.db"
-       
-       # Linux/Mac
-       export TOGETHER_API_KEY="your_api_key_here"
-       export DATABASE_URL="sqlite:///./exam_grader.db"
+   - If you want AI-generated questions and AI grading:
+     - **Easiest way:** Just run `python run.py` - you'll be prompted interactively to enter your API key
+     - **Manual way:** Create a `.env` file in the project root with:
        ```
+       TOGETHER_API_KEY=your_api_key_here
+       DATABASE_URL=sqlite:///./exam_grader.db
+       ```
+   - Get a free API key from: https://together.ai/
    - See `API_KEY_GUIDE.md` for more details about API keys (optional)
 
 3. **Initialize the database:**
@@ -38,10 +34,8 @@
    ```bash
    python run.py
    ```
-   Or:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
+   - If you don't have an API key set, you'll be prompted to enter one interactively
+   - Or you can run directly with: `uvicorn app.main:app --reload`
 
 5. **Access the application:**
    - Open your browser to `http://localhost:8000`
