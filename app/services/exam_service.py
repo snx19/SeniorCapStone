@@ -12,18 +12,37 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from app.core.grading.generator import QuestionGenerator
-
-question_generator = QuestionGenerator()
-
 class ExamService:
     """Service for managing exam sessions and workflow."""
     
     def __init__(self):
         self.settings = get_settings()
-        self.question_generator = question_generator
-        self.answer_grader = AnswerGrader()
-        self.final_grade_calculator = FinalGradeCalculator()
+        # Initialize these lazily - they create LLMClient which requires API key
+        # Only create them when actually needed (in methods that use them)
+        self._question_generator = None
+        self._answer_grader = None
+        self._final_grade_calculator = None
+    
+    @property
+    def question_generator(self):
+        """Lazily initialize question generator."""
+        if self._question_generator is None:
+            self._question_generator = QuestionGenerator()
+        return self._question_generator
+    
+    @property
+    def answer_grader(self):
+        """Lazily initialize answer grader."""
+        if self._answer_grader is None:
+            self._answer_grader = AnswerGrader()
+        return self._answer_grader
+    
+    @property
+    def final_grade_calculator(self):
+        """Lazily initialize final grade calculator."""
+        if self._final_grade_calculator is None:
+            self._final_grade_calculator = FinalGradeCalculator()
+        return self._final_grade_calculator
     
     async def start_exam(self, db: Session, username: str) -> Exam:
         """Start a new exam session for a student."""
