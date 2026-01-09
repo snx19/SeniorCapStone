@@ -54,6 +54,17 @@ class LLMClient:
                 response.raise_for_status()
                 result = response.json()
                 return result["choices"][0]["message"]["content"]
+        except httpx.HTTPStatusError as e:
+            # Log the actual error response from the API
+            error_detail = "No error details"
+            try:
+                error_detail = e.response.json()
+            except:
+                error_detail = e.response.text
+            logger.error(f"LLM API error: {e}")
+            logger.error(f"API Error Details: {error_detail}")
+            logger.error(f"Request payload: {payload}")
+            raise
         except Exception as e:
             logger.error(f"LLM API error: {e}")
             raise
