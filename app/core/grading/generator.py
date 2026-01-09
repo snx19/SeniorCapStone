@@ -15,6 +15,8 @@ class QuestionGenerator:
         self.llm_client = LLMClient()
         self.prompt_template = None
         self._load_template()
+        self._question_counter = 0
+        self.generated_questions = set()
     
     def _load_template(self):
         """Load the question generation prompt template."""
@@ -32,69 +34,119 @@ Topic: {topic}
 Difficulty: {difficulty}
 Question Number: {question_number}
 
-Please provide:
-1. A clear, thought-provoking question
-2. Relevant background context
-3. A detailed grading rubric
+Requirements:
+1.Each question you generate must be unique for the exam. Do not repeat previous questions. 
+2. Provide relevant background context
+3. Provide a detailed grading rubric
 
-Respond in JSON format with the following structure:
-{{
+Important: Respond only in JSON format exactly like this:
+{
     "question_text": "The question text",
     "context": "Background context and information",
     "rubric": "Detailed grading rubric with criteria"
-}}"""
+}
+Do not add anything else outside the JSON object."""
     
     async def generate_question(self, topic: str = "Computer Science", difficulty: str = "Intermediate", 
-                               question_number: int = 1) -> GeneratedQuestion:
+                               question_number: int | None = None) -> GeneratedQuestion:
         """Generate a question using the LLM."""
-        prompt = format_prompt(
-            self.prompt_template,
-            topic=topic,
-            difficulty=difficulty,
-            question_number=question_number
-        )
+        if question_number is None:
+            self._question_counter += 1
+            question_number = self._question_counter
+
+        max_attempts = 5  # Retry LLM generation if duplicate
+        for attempt in range(max_attempts):
+            logger.info(f"Generating question #{question_number}, attempt {attempt+1}")
+            prompt = format_prompt(
+                self.prompt_template,
+                topic=topic,
+                difficulty=difficulty,
+                question_number=question_number
+            )
+
+            system_prompt = f"""
+            You are an expert computer science professor generating exam questions.
+
+Topic: {topic}
+Difficulty: {difficulty}
+Question Number: {question_number}
+
+Rules:
+- Generate a NEW and UNIQUE question for each question number.
+- Do NOT repeat previous questions.
+- Respond with VALID JSON ONLY.
+- Do NOT include explanations or extra text.
+
+Required JSON format:
+{{
+  "question_text": "string",
+  "context": "string",
+  "rubric": "string"
+}}
+"""
         
-        system_prompt = "You are an expert computer science professor creating exam questions. Always respond with valid JSON."
         
-        try:
-            response_dict = await self.llm_client.generate_json(prompt, system_prompt)
-            question = validate_response(response_dict, GeneratedQuestion)
-            
-            if not question:
-                # Fallback to default question if validation fails
-                logger.warning("LLM response validation failed, using fallback question")
-                return self._get_fallback_question(question_number)
-            
-            return question
-        except Exception as e:
-            logger.warning(f"Error generating question (likely no API key): {e}")
-            # Return fallback question on error
-            return self._get_fallback_question(question_number)
-    
+            try:
+                response_dict = await self.llm_client.generate_json(prompt, system_prompt)
+                question = validate_response(response_dict, GeneratedQuestion)
+                if not question:
+                    continue  # Invalid response, try again
+
+                normalized = self._normalize(question.question_text)
+                if normalized in self.generated_questions:
+                    logger.warning(f"Duplicate detected for question #{question_number}, retrying LLM")
+                    continue  # Try again
+
+                # Unique question
+                self.generated_questions.add(normalized)
+                return question
+                
+            except Exception as e:
+                logger.warning(f"Error generating question #{question_number}: {e}")
+                continue  # Try again
+        # If all attempts fail or duplicates keep appearing, use a fallback
+        fallback = self._get_fallback_question(question_number)
+        normalized = self._normalize(fallback.question_text)
+        self.generated_questions.add(normalized)
+        return fallback
+        
+    def _normalize(self, text: str) -> str:
+        return " ".join(text.lower().split())
+
     def _get_fallback_question(self, question_number: int) -> GeneratedQuestion:
         """Get a fallback question based on question number."""
-        fallback_questions = {
-            1: {
-                "question_text": "Question 1: Explain the fundamental principles of data structures. Discuss the differences between arrays and linked lists, and when you would use each.",
-                "context": "Data structures are fundamental to computer science. Arrays store elements in contiguous memory, while linked lists use nodes with pointers. Understanding when to use each is crucial for efficient programming.",
-                "rubric": "Grading criteria: (1) Understanding of arrays - 25 points, (2) Understanding of linked lists - 25 points, (3) Comparison and differences - 25 points, (4) Use case examples - 25 points. Total: 100 points."
+        fallback_questions = [
+            {
+                "question_text": "Explain the fundamental principles of data structures. Discuss the differences between arrays and linked lists, and when you would use each.",
+                "context": "Data structures are fundamental to computer science. Arrays store elements in contiguous memory, while linked lists use nodes with pointers.",
+                "rubric": "Grading criteria: (1) Understanding of arrays - 25 points, (2) Understanding of linked lists - 25 points, (3) Comparison - 25 points, (4) Use cases - 25 points."
             },
-            2: {
-                "question_text": "Question 2: Describe the concept of algorithm time complexity (Big O notation). Provide examples of O(1), O(n), and O(n²) algorithms and explain why understanding complexity matters.",
-                "context": "Algorithm complexity analysis helps developers understand how algorithms scale. Big O notation describes the worst-case time complexity. Efficient algorithms can make the difference between a usable and unusable program.",
-                "rubric": "Grading criteria: (1) Explanation of Big O notation - 30 points, (2) O(1) example and explanation - 20 points, (3) O(n) example and explanation - 20 points, (4) O(n²) example and explanation - 20 points, (5) Importance discussion - 10 points. Total: 100 points."
+            {
+                "question_text": "Describe the concept of algorithm time complexity (Big O notation). Provide examples of O(1), O(n), and O(n²) algorithms.",
+                "context": "Algorithm complexity analysis helps developers understand how algorithms scale. Big O notation describes worst-case time complexity.",
+                "rubric": "Grading criteria: (1) Explanation of Big O - 30 points, (2) O(1) example - 20 points, (3) O(n) example - 20 points, (4) O(n²) example - 20 points, (5) Importance - 10 points."
             },
-            3: {
-                "question_text": "Question 3: Explain the concept of recursion in programming. Discuss its advantages and disadvantages, and provide an example of a problem that is naturally solved using recursion.",
-                "context": "Recursion is a programming technique where a function calls itself to solve a problem. It's commonly used in tree traversal, divide-and-conquer algorithms, and problems with recursive structure like factorial or Fibonacci sequences.",
-                "rubric": "Grading criteria: (1) Explanation of recursion concept - 25 points, (2) Advantages discussion - 20 points, (3) Disadvantages discussion - 20 points, (4) Appropriate example with explanation - 30 points, (5) Clarity and organization - 5 points. Total: 100 points."
+            {
+                "question_text": "Explain the concept of recursion in programming. Discuss its advantages and disadvantages, and provide an example.",
+                "context": "Recursion is a programming technique where a function calls itself. It's used in tree traversal and divide-and-conquer algorithms.",
+                "rubric": "Grading criteria: (1) Explanation - 25 points, (2) Advantages - 20 points, (3) Disadvantages - 20 points, (4) Example - 30 points, (5) Clarity - 5 points."
             }
-        }
+        ]
         
-        fallback = fallback_questions.get(question_number, fallback_questions[1])
-        return GeneratedQuestion(
-            question_text=fallback["question_text"],
-            context=fallback["context"],
-            rubric=fallback["rubric"]
-        )
+        # Pick the first fallback not yet used
+        for fallback in fallback_questions:
+            normalized = self._normalize(fallback["question_text"])
+            if normalized not in self.generated_questions:
+                return GeneratedQuestion(
+                    question_text=fallback["question_text"],
+                    context=fallback["context"],
+                    rubric=fallback["rubric"]
+                )
 
+        # If all fallback questions already used, generate a generic one
+        generic_fallback = {
+            "question_text": f"Generic CS question #{question_number}.",
+            "context": "This is a fallback question.",
+            "rubric": "Grading criteria: complete answer - 100 points."
+        }
+        return GeneratedQuestion(**generic_fallback)

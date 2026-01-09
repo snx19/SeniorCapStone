@@ -36,19 +36,20 @@ Grading Rubric: {rubric}
 
 Student Answer: {student_answer}
 
-Please evaluate the answer and provide:
-1. A numerical grade (0-100)
-2. Detailed feedback
-3. Strengths of the answer
-4. Weaknesses of the answer
+Instructions:
+1. Provide a numerical grade (0-100) based on the rubric and answer quality
+2. Provide detailed feedback explaining the grade
+3. List strengths of the answer in a JSON array
+4. List weaknesses of the answer in a JSON array
 
-Respond in JSON format:
-{{
-    "grade": 85.0,
+Respond only in JSON format exactly like this:
+{
+    "grade": <numerical grade 0-100>,
     "feedback": "Detailed feedback text",
     "strengths": ["strength1", "strength2"],
     "weaknesses": ["weakness1", "weakness2"]
-}}"""
+}
+Do not include any notes or text outside the JSON object."""
     
     async def grade_answer(self, question_text: str, context: str, rubric: str, 
                           student_answer: str) -> GradingResult:

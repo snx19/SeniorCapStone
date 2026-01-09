@@ -10,6 +10,7 @@
 1. **Install dependencies:**
    ```bash
    pip install -e .
+   pip install together
    ```
 
 2. **Set up environment variables:**

@@ -12,13 +12,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from app.core.grading.generator import QuestionGenerator
+
+question_generator = QuestionGenerator()
 
 class ExamService:
     """Service for managing exam sessions and workflow."""
     
     def __init__(self):
         self.settings = get_settings()
-        self.question_generator = QuestionGenerator()
+        self.question_generator = question_generator
         self.answer_grader = AnswerGrader()
         self.final_grade_calculator = FinalGradeCalculator()
     
@@ -46,28 +49,12 @@ class ExamService:
             except Exception as e:
                 logger.warning(f"Error generating question {i} (likely no API key): {e}")
                 # Create different fallback questions based on question number
-                fallback_questions = {
-                    1: ("Question 1: Explain the fundamental principles of data structures. Discuss the differences between arrays and linked lists, and when you would use each.",
-                        "Data structures are fundamental to computer science. Arrays store elements in contiguous memory, while linked lists use nodes with pointers.",
-                        "Grading criteria: (1) Understanding of arrays - 25 points, (2) Understanding of linked lists - 25 points, (3) Comparison - 25 points, (4) Use cases - 25 points."),
-                    2: ("Question 2: Describe the concept of algorithm time complexity (Big O notation). Provide examples of O(1), O(n), and O(n²) algorithms.",
-                        "Algorithm complexity analysis helps developers understand how algorithms scale. Big O notation describes worst-case time complexity.",
-                        "Grading criteria: (1) Explanation of Big O - 30 points, (2) O(1) example - 20 points, (3) O(n) example - 20 points, (4) O(n²) example - 20 points, (5) Importance - 10 points."),
-                    3: ("Question 3: Explain the concept of recursion in programming. Discuss its advantages and disadvantages, and provide an example.",
-                        "Recursion is a programming technique where a function calls itself. It's used in tree traversal and divide-and-conquer algorithms.",
-                        "Grading criteria: (1) Explanation - 25 points, (2) Advantages - 20 points, (3) Disadvantages - 20 points, (4) Example - 30 points, (5) Clarity - 5 points.")
-                }
-                
-                q_data = fallback_questions.get(i, fallback_questions[1])
-                QuestionRepository.create(
-                    db,
-                    exam.id,
-                    i,
-                    q_data[0],
-                    q_data[1],
-                    q_data[2]
+                generated = await self.question_generator.generate_question(
+                    topic="Computer Science",
+                    difficulty="Intermediate",
+                    question_number=i
                 )
-        
+
         return exam
     
     async def get_current_question(self, db: Session, exam_id: int) -> Optional[Question]:

@@ -170,6 +170,7 @@ Then open **http://localhost:8000** in your browser!
 2. **Install dependencies:**
    ```bash
    pip install -e .
+   pip install together
    ```
 
 3. **Initialize the database:**

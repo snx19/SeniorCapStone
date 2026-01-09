@@ -7,6 +7,8 @@ from app.api.router import api_router
 from app.db.base import Base, engine
 from app.logging_config import setup_logging
 
+
+
 # Setup logging
 setup_logging()
 
