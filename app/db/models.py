@@ -1,5 +1,5 @@
 """Database models."""
-from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -18,6 +18,9 @@ class User(Base):
     last_name = Column(String(100), nullable=False)
     student_id = Column(String(50), nullable=True)  # Only for students
     instructor_id = Column(String(50), nullable=True)  # Only for teachers
+    
+    # Relationships
+    courses = relationship("Course", back_populates="instructor")
     
 class Student(Base):
     """Student model."""
@@ -63,4 +66,24 @@ class Question(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     exam = relationship("Exam", back_populates="questions")
+
+
+class Course(Base):
+    """Course model for instructors."""
+    __tablename__ = "courses"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    course_number = Column(String(20), nullable=False, index=True)  # e.g., "CSC376"
+    section = Column(String(10), nullable=False)  # e.g., "424"
+    quarter_year = Column(String(20), nullable=False)  # e.g., "Spring26"
+    instructor_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    instructor = relationship("User", back_populates="courses")
+    
+    # Composite unique constraint: same course_number + section + quarter_year should be unique per instructor
+    __table_args__ = (
+        UniqueConstraint('course_number', 'section', 'quarter_year', 'instructor_id', name='uq_course_instructor'),
+    )
 

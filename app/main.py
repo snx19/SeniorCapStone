@@ -82,9 +82,19 @@ async def teacher_dashboard(request: Request, db: Session = Depends(get_db)):
     # Use first_name if available, otherwise fallback to "Teacher"
     first_name = user.first_name if user.first_name else "Teacher"
     
+    # TODO: Query courses for this instructor from database
+    # For now, using empty list as placeholder
+    courses = []  # Will be populated when Course model is created
+    
+    # TODO: Query open exams for this instructor from database
+    # For now, using empty list as placeholder
+    open_exams = []  # Will be populated when Exam model is extended with course info
+    
     return render_template("teacher_dashboard.html", {
         "request": request,
-        "first_name": first_name
+        "first_name": first_name,
+        "courses": courses,
+        "open_exams": open_exams
     })
 
 @app.get("/", response_class=HTMLResponse)
