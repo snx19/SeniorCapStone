@@ -100,6 +100,13 @@ async def signup_page(request: Request):
     error = request.query_params.get("error", "")
     return render_template("signup.html", {"request": request, "error": error})
 
+@app.get("/teacher/login", response_class=HTMLResponse)
+async def teacher_login_page(request: Request):
+    """Teacher login page."""
+    error = request.query_params.get("error", "")
+    success = request.query_params.get("success", "")
+    return render_template("teacher_login.html", {"request": request, "error": error, "success": success})
+
 
 @app.get("/question/{question_id}", response_class=HTMLResponse)
 async def question_page(request: Request, question_id: int):

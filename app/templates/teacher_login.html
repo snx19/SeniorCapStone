@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Oral Exam Grader - Login</title>
+    <title>AI Oral Exam Grader - Teacher Login</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
     <div class="container">
         <div class="login-card">
             <h1>AI Oral Exam Grader</h1>
-            <p class="subtitle">Enter your email and password to begin your exam</p>
+            <p class="subtitle">Teacher Portal - Enter your email and password</p>
             
             {% if error %}
             <div class="error-message" style="color:red; margin-bottom: 10px;">
@@ -41,12 +41,12 @@
                     <label for="password">Password:</label>
                     <input type="password" id="password" name="password" required>
                 </div>
-                <button type="submit" class="btn btn-primary">Start Exam</button>
+                <button type="submit" class="btn btn-primary">Login</button>
             </form>
             
             <p style="text-align: center; margin-top: 20px;">
-                <a href="/teacher/login">Instructor Login</a><br>
-                Don't have an account? <a href="/signup">Create one here</a>
+                <a href="/">Student Login</a> | 
+                <a href="/signup">Create Account</a>
             </p>
         </div>
     </div>
