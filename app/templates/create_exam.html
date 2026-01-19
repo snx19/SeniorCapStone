@@ -57,8 +57,39 @@
         }
         .course-select-group {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 2fr;
             gap: 15px;
+        }
+        
+        .section-checkbox {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            transition: background-color 0.2s;
+        }
+        
+        .section-checkbox:hover {
+            background-color: #e9ecef;
+            border-color: #4CAF50;
+        }
+        
+        .section-checkbox input[type="checkbox"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        
+        .section-checkbox label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: normal;
+            flex: 1;
+            user-select: none;
         }
         .exam-name-group {
             margin-top: 20px;
@@ -154,18 +185,19 @@
                             <label for="course_number" style="margin-bottom: 8px;">Course Number:</label>
                             <select id="course_number" name="course_number" required onchange="updateSections()">
                                 <option value="">Select Course</option>
-                                {% for course in courses %}
-                                <option value="{{ course.course_number }}" data-quarter="{{ course.quarter_year }}">{{ course.course_number }}</option>
+                                {% for course_num in unique_course_numbers %}
+                                <option value="{{ course_num }}">{{ course_num }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div>
-                            <label for="section" style="margin-bottom: 8px;">Section:</label>
-                            <select id="section" name="section" required>
-                                <option value="">Select Section</option>
-                            </select>
+                        <div style="grid-column: 2; grid-row: 1 / 3;">
+                            <label style="margin-bottom: 8px;">Sections (select all that apply):</label>
+                            <div id="sections-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 5px; max-height: 200px; overflow-y: auto;">
+                                <!-- Sections will be populated here as checkboxes -->
+                            </div>
+                            <p class="info-text" style="margin-top: 10px; font-size: 0.85em;">Select one or more sections from the same quarter/year</p>
                         </div>
-                        <div>
+                        <div style="grid-column: 1; grid-row: 2;">
                             <label for="quarter_year" style="margin-bottom: 8px;">Quarter / Year:</label>
                             <select id="quarter_year" name="quarter_year" required>
                                 <option value="">Select Quarter/Year</option>
@@ -210,7 +242,7 @@
     <script>
         // Store courses data for JavaScript
         const coursesData = [
-            {% for course in courses %}
+            {% for course in all_courses %}
             {
                 course_number: "{{ course.course_number }}",
                 section: "{{ course.section }}",
@@ -221,47 +253,111 @@
 
         function updateSections() {
             const courseSelect = document.getElementById('course_number');
-            const sectionSelect = document.getElementById('section');
+            const sectionsContainer = document.getElementById('sections-container');
             const quarterSelect = document.getElementById('quarter_year');
             
             const selectedCourse = courseSelect.value;
             
             // Clear sections and quarters
-            sectionSelect.innerHTML = '<option value="">Select Section</option>';
+            sectionsContainer.innerHTML = '';
             quarterSelect.innerHTML = '<option value="">Select Quarter/Year</option>';
             
             if (!selectedCourse) return;
             
             // Get unique sections and quarter/years for this course
-            const courseSections = new Set();
+            const sectionsByQuarter = {};
             const quarterYears = new Set();
             
             coursesData.forEach(course => {
                 if (course.course_number === selectedCourse) {
-                    courseSections.add(course.section);
                     quarterYears.add(course.quarter_year);
+                    // Group sections by quarter/year
+                    if (!sectionsByQuarter[course.quarter_year]) {
+                        sectionsByQuarter[course.quarter_year] = new Set();
+                    }
+                    sectionsByQuarter[course.quarter_year].add(course.section);
                 }
             });
             
-            // Populate sections
-            courseSections.forEach(section => {
-                const option = document.createElement('option');
-                option.value = section;
-                option.textContent = `Section ${section}`;
-                sectionSelect.appendChild(option);
+            // Create checkboxes for each section
+            Object.keys(sectionsByQuarter).sort().forEach(quarter => {
+                Array.from(sectionsByQuarter[quarter]).sort().forEach(section => {
+                    const checkboxDiv = document.createElement('div');
+                    checkboxDiv.className = 'section-checkbox';
+                    checkboxDiv.innerHTML = `
+                        <input type="checkbox" id="section_${section}_${quarter}" name="sections[]" value="${section}" data-quarter="${quarter}">
+                        <label for="section_${section}_${quarter}">Section ${section}</label>
+                    `;
+                    sectionsContainer.appendChild(checkboxDiv);
+                });
             });
             
-            // Populate quarter/years
-            quarterYears.forEach(qy => {
+            // Populate quarter/years dropdown
+            Array.from(quarterYears).sort().forEach(qy => {
                 const option = document.createElement('option');
                 option.value = qy;
                 option.textContent = qy;
                 quarterSelect.appendChild(option);
             });
+            
+            // Auto-select quarter/year if only one option
+            if (quarterYears.size === 1) {
+                quarterSelect.value = Array.from(quarterYears)[0];
+            }
+            
+            // Update quarter when section checkbox changes (ensure consistency)
+            // Track selected quarter to ensure all sections are from the same quarter
+            let selectedQuarter = null;
+            document.querySelectorAll('input[name="sections[]"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const quarter = this.getAttribute('data-quarter');
+                    
+                    if (this.checked) {
+                        // If no quarter selected yet, set it
+                        if (!selectedQuarter) {
+                            selectedQuarter = quarter;
+                            quarterSelect.value = quarter;
+                            // Disable checkboxes from other quarters
+                            document.querySelectorAll('input[name="sections[]"]').forEach(cb => {
+                                if (cb.getAttribute('data-quarter') !== quarter) {
+                                    cb.disabled = true;
+                                    cb.parentElement.style.opacity = '0.5';
+                                }
+                            });
+                        } else if (quarter !== selectedQuarter) {
+                            // Trying to select section from different quarter - uncheck it
+                            this.checked = false;
+                            alert(`Please select sections from the same quarter/year (${selectedQuarter}).`);
+                        }
+                    } else {
+                        // Unchecked - check if any other sections are still selected
+                        const checkedBoxes = document.querySelectorAll('input[name="sections[]"]:checked');
+                        if (checkedBoxes.length === 0) {
+                            // No sections selected, reset everything
+                            selectedQuarter = null;
+                            quarterSelect.value = '';
+                            document.querySelectorAll('input[name="sections[]"]').forEach(cb => {
+                                cb.disabled = false;
+                                cb.parentElement.style.opacity = '1';
+                            });
+                        }
+                    }
+                });
+            });
         }
 
         // Update sections when course changes
         document.getElementById('course_number').addEventListener('change', updateSections);
+        
+        // Validate at least one section is selected on form submit
+        document.getElementById('create-exam-form').addEventListener('submit', function(e) {
+            const checkedSections = document.querySelectorAll('input[name="sections[]"]:checked');
+            if (checkedSections.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one section.');
+                return false;
+            }
+        });
     </script>
 </body>
 </html>
