@@ -244,13 +244,23 @@
         <div class="info-section">
             <h2>Exam Information</h2>
             <div class="info-grid">
-                <div class="info-item">
+                <div class="info-item" style="grid-column: 1 / -1;">
                     <div class="info-label">Exam ID</div>
-                    <div class="info-value">{{ exam.exam_id }}</div>
+                    <div class="info-value">
+                        {{ combined_exam_id }}
+                        {% if related_exams|length > 1 %}
+                            <br><span style="font-size: 0.85em; color: #666; font-style: italic;">
+                                (Individual section IDs: {% for rel_exam in related_exams %}{{ rel_exam.exam_id }}{% if not loop.last %}, {% endif %}{% endfor %})
+                            </span>
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Course</div>
-                    <div class="info-value">{{ exam.course_number }} - Section {{ exam.section }}</div>
+                    <div class="info-value">
+                        {{ exam.course_number }} - 
+                        Sections: {{ sections_list | join(', ') }}
+                    </div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Quarter / Year</div>

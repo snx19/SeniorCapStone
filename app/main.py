@@ -566,7 +566,12 @@ async def exam_review_page(
         Exam.exam_name == exam.exam_name,
         Exam.quarter_year == exam.quarter_year,
         Exam.date_published.is_(None)  # Only unpublished
-    ).all()
+    ).order_by(Exam.section).all()
+    
+    # Create combined exam_id with all sections
+    sections_list = sorted([e.section for e in related_exams])
+    sections_str = '-'.join(sections_list)
+    combined_exam_id = f"{exam.course_number}-{sections_str}-{exam.exam_name.lower().replace(' ', '-')}-{exam.quarter_year}"
     
     error = request.query_params.get("error", "")
     success = request.query_params.get("success", "")
@@ -575,6 +580,8 @@ async def exam_review_page(
         "request": request,
         "exam": exam,
         "related_exams": related_exams,
+        "combined_exam_id": combined_exam_id,
+        "sections_list": sections_list,
         "error": error,
         "success": success
     })
