@@ -3,12 +3,14 @@ from fastapi import FastAPI, Request, Depends, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_, and_
+from datetime import datetime, timezone
 from app.api.router import api_router
 from app.db.base import Base, engine
 from app.db.session import get_db
-from app.db.models import User, Course
+from app.db.models import User, Course, Exam, Student
 from app.logging_config import setup_logging
 
 # Import seeding function
@@ -86,9 +88,56 @@ async def teacher_dashboard(request: Request, db: Session = Depends(get_db)):
     # Query courses for this instructor from database
     courses = db.query(Course).filter(Course.instructor_id == user.id).all()
     
-    # TODO: Query open exams for this instructor from database
-    # For now, using empty list as placeholder
-    open_exams = []  # Will be populated when Exam model is extended with course info
+    # Query open exams for this instructor (published exams)
+    # Join with Student to get student info, then try to match with User
+    open_exams_query = db.query(Exam).outerjoin(
+        Student, Exam.student_id == Student.id
+    ).filter(
+        Exam.instructor_id == user.id,
+        Exam.date_published.isnot(None)  # Only published exams
+    )
+    
+    # Build exam data with student info
+    open_exams = []
+    for exam in open_exams_query.all():
+        student = None
+        user_obj = None
+        
+        if exam.student_id:
+            student = db.query(Student).filter(Student.id == exam.student_id).first()
+            if student:
+                # Try to find User by email (assuming username might be email)
+                user_obj = db.query(User).filter(User.email == student.username).first()
+        
+        # Calculate percent if final_grade exists
+        percent = exam.final_grade * 100 if exam.final_grade else None
+        
+        # Calculate letter grade
+        grade = None
+        if percent is not None:
+            if percent >= 90:
+                grade = "A"
+            elif percent >= 80:
+                grade = "B"
+            elif percent >= 70:
+                grade = "C"
+            elif percent >= 60:
+                grade = "D"
+            else:
+                grade = "F"
+        
+        open_exams.append({
+            "exam_id": exam.exam_id,
+            "student_id": user_obj.student_id if user_obj else (student.username if student else None),
+            "first_name": user_obj.first_name if user_obj else None,
+            "last_name": user_obj.last_name if user_obj else None,
+            "status": exam.status,
+            "percent": percent,
+            "grade": grade,
+            "date_started": exam.created_at if exam.student_id else None,
+            "date_completed": exam.completed_at,
+            "date_published": exam.date_published
+        })
     
     return render_template("teacher_dashboard.html", {
         "request": request,
@@ -217,6 +266,104 @@ async def register_course(
     # Success - redirect to dashboard
     return RedirectResponse(url="/teacher/dashboard?success=course_registered", status_code=302)
 
+@app.get("/teacher/create-exam", response_class=HTMLResponse)
+async def create_exam_page(request: Request, db: Session = Depends(get_db)):
+    """Display the create new exam form."""
+    # Get email from cookie
+    email = request.cookies.get("username")
+    if not email:
+        return RedirectResponse(url="/?error=login_required", status_code=302)
+    
+    # Get user from database
+    user = db.query(User).filter(User.email == email).first()
+    if not user or user.role != "teacher":
+        return RedirectResponse(url="/?error=login_required", status_code=302)
+    
+    # Get courses for this instructor
+    courses = db.query(Course).filter(Course.instructor_id == user.id).all()
+    
+    error = request.query_params.get("error", "")
+    
+    return render_template("create_exam.html", {
+        "request": request,
+        "courses": courses,
+        "error": error
+    })
+
+@app.post("/teacher/create-exam")
+async def create_exam(
+    request: Request,
+    course_number: str = Form(...),
+    section: str = Form(...),
+    quarter_year: str = Form(...),
+    exam_name: str = Form(...),
+    llm_prompt: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Handle exam creation form submission."""
+    # Get email from cookie
+    email = request.cookies.get("username")
+    if not email:
+        return RedirectResponse(url="/?error=login_required", status_code=302)
+    
+    # Get user from database
+    user = db.query(User).filter(User.email == email).first()
+    if not user or user.role != "teacher":
+        return RedirectResponse(url="/?error=login_required", status_code=302)
+    
+    # Verify the course belongs to this instructor
+    course = db.query(Course).filter(
+        Course.course_number == course_number.upper(),
+        Course.section == section,
+        Course.quarter_year == quarter_year,
+        Course.instructor_id == user.id
+    ).first()
+    
+    if not course:
+        return RedirectResponse(url="/teacher/create-exam?error=Course not found or access denied", status_code=302)
+    
+    # Generate exam_id: course_number-section-exam_name-quarter_year
+    exam_id = f"{course_number.upper()}-{section}-{exam_name.lower().replace(' ', '-')}-{quarter_year}"
+    
+    # Check if exam with this ID already exists
+    existing_exam = db.query(Exam).filter(Exam.exam_id == exam_id).first()
+    if existing_exam:
+        return RedirectResponse(url="/teacher/create-exam?error=An exam with this ID already exists. Please choose a different exam name.", status_code=302)
+    
+    # Get instructor name
+    instructor_name = f"{user.first_name} {user.last_name}"
+    
+    # Create new exam (not published yet, status = "not_started")
+    exam = Exam(
+        exam_id=exam_id,
+        course_number=course_number.upper(),
+        section=section,
+        exam_name=exam_name,
+        quarter_year=quarter_year,
+        instructor_name=instructor_name,
+        instructor_id=user.id,
+        status="not_started",  # Not yet published
+        # Store LLM prompt in final_explanation field for now (or create a separate field later)
+        # For now, we'll store it in final_explanation temporarily
+        final_explanation=llm_prompt
+    )
+    
+    try:
+        db.add(exam)
+        db.commit()
+        db.refresh(exam)
+        
+        # Redirect to course page to see the new exam
+        # TODO: Later redirect to exam preview/edit page for LLM generation
+        return RedirectResponse(url=f"/teacher/course/{course_number.upper()}/{section}?exam_created={exam_id}", status_code=302)
+        
+    except IntegrityError as e:
+        db.rollback()
+        return RedirectResponse(url=f"/teacher/create-exam?error=Error creating exam: {str(e)}", status_code=302)
+    except Exception as e:
+        db.rollback()
+        return RedirectResponse(url=f"/teacher/create-exam?error=Unexpected error: {str(e)}", status_code=302)
+
 @app.get("/teacher/course/{course_number}/{section}", response_class=HTMLResponse)
 async def course_page(
     request: Request,
@@ -245,24 +392,26 @@ async def course_page(
     if not course:
         return RedirectResponse(url="/teacher/dashboard?error=course_not_found", status_code=302)
     
-    # TODO: Query exams for this course/section from database
-    # For now, using empty lists as placeholder until Exam model is extended with course info
-    # When Exam model has course_number, section, quarter_year fields, query like:
-    # open_exams = db.query(Exam).filter(
-    #     Exam.course_number == course_number,
-    #     Exam.section == section,
-    #     Exam.quarter_year == course.quarter_year,
-    #     Exam.status.in_(["active", "in_progress", "not_started"])
-    # ).all()
-    # closed_exams = db.query(Exam).filter(
-    #     Exam.course_number == course_number,
-    #     Exam.section == section,
-    #     Exam.quarter_year == course.quarter_year,
-    #     Exam.status == "completed"
-    # ).all()
+    # Query open exams for this course/section (published and not completed)
+    open_exams = db.query(Exam).filter(
+        Exam.course_number == course_number.upper(),
+        Exam.section == section,
+        Exam.quarter_year == course.quarter_year,
+        Exam.date_published.isnot(None),  # Must be published
+        Exam.status != "completed"  # Not completed
+    ).order_by(Exam.date_published.desc()).all()
     
-    open_exams = []  # Will be populated when Exam model is extended
-    closed_exams = []  # Will be populated when Exam model is extended
+    # Query closed exams for this course/section (completed or past end date)
+    now = datetime.now(timezone.utc)
+    closed_exams = db.query(Exam).filter(
+        Exam.course_number == course_number.upper(),
+        Exam.section == section,
+        Exam.quarter_year == course.quarter_year,
+        or_(
+            Exam.status == "completed",
+            and_(Exam.date_end_availability.isnot(None), Exam.date_end_availability < now)
+        )
+    ).order_by(Exam.completed_at.desc()).all()
     
     return render_template("course_page.html", {
         "request": request,
@@ -271,6 +420,38 @@ async def course_page(
         "quarter_year": course.quarter_year,
         "open_exams": open_exams,
         "closed_exams": closed_exams
+    })
+
+@app.get("/teacher/exam/{exam_id}", response_class=HTMLResponse)
+async def exam_details_page(
+    request: Request,
+    exam_id: str,
+    db: Session = Depends(get_db)
+):
+    """Display exam details page."""
+    # Get email from cookie
+    email = request.cookies.get("username")
+    if not email:
+        return RedirectResponse(url="/?error=login_required", status_code=302)
+    
+    # Get user from database
+    user = db.query(User).filter(User.email == email).first()
+    if not user or user.role != "teacher":
+        return RedirectResponse(url="/?error=login_required", status_code=302)
+    
+    # Get exam from database (using exam_id string, not id integer)
+    exam = db.query(Exam).filter(Exam.exam_id == exam_id).first()
+    
+    if not exam:
+        return RedirectResponse(url="/teacher/dashboard?error=exam_not_found", status_code=302)
+    
+    # Verify exam belongs to this instructor
+    if exam.instructor_id != user.id:
+        return RedirectResponse(url="/teacher/dashboard?error=access_denied", status_code=302)
+    
+    return render_template("exam_details.html", {
+        "request": request,
+        "exam": exam
     })
 
 @app.get("/", response_class=HTMLResponse)

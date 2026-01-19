@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Exam - Teacher Portal</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .create-exam-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .create-exam-card h1 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        .form-group textarea {
+            min-height: 300px;
+            resize: vertical;
+        }
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: #999;
+        }
+        .course-select-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+        .exam-name-group {
+            margin-top: 20px;
+        }
+        .llm-prompt-group {
+            margin-top: 30px;
+        }
+        .llm-prompt-group textarea {
+            min-height: 250px;
+            padding: 15px;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            flex: 1;
+        }
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+        .btn-primary:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background-color: #666;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            flex: 1;
+        }
+        .btn-secondary:hover {
+            background-color: #555;
+        }
+        .error-message {
+            color: red;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #ffe6e6;
+            border-radius: 4px;
+        }
+        .info-text {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .back-link {
+            color: #4CAF50;
+            text-decoration: none;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/teacher/dashboard" class="back-link">← Back to Dashboard</a>
+        
+        <div class="create-exam-card">
+            <h1>Create New Exam</h1>
+            
+            {% if error %}
+            <div class="error-message">
+                {{ error }}
+            </div>
+            {% endif %}
+            
+            <form method="post" action="/teacher/create-exam" id="create-exam-form">
+                <!-- Course Selection -->
+                <div class="form-group">
+                    <label>Course / Section / Quarter:</label>
+                    <div class="course-select-group">
+                        <div>
+                            <label for="course_number" style="margin-bottom: 8px;">Course Number:</label>
+                            <select id="course_number" name="course_number" required onchange="updateSections()">
+                                <option value="">Select Course</option>
+                                {% for course in courses %}
+                                <option value="{{ course.course_number }}" data-quarter="{{ course.quarter_year }}">{{ course.course_number }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="section" style="margin-bottom: 8px;">Section:</label>
+                            <select id="section" name="section" required>
+                                <option value="">Select Section</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="quarter_year" style="margin-bottom: 8px;">Quarter / Year:</label>
+                            <select id="quarter_year" name="quarter_year" required>
+                                <option value="">Select Quarter/Year</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Exam Name -->
+                <div class="form-group exam-name-group">
+                    <label for="exam_name">Exam Name:</label>
+                    <input 
+                        type="text" 
+                        id="exam_name" 
+                        name="exam_name" 
+                        required 
+                        placeholder="e.g. Midterm"
+                        autocomplete="off"
+                    >
+                </div>
+                
+                <!-- LLM Prompt Input -->
+                <div class="form-group llm-prompt-group">
+                    <label for="llm_prompt">Exam Instructions for AI Question Generator:</label>
+                    <textarea 
+                        id="llm_prompt" 
+                        name="llm_prompt" 
+                        required 
+                        placeholder="Please enter exam topic, rubric, grading criteria, and any further expectations"
+                    ></textarea>
+                    <p class="info-text">Describe the exam topic, grading criteria, and any specific expectations. The AI will generate questions based on your instructions.</p>
+                </div>
+                
+                <div class="button-group">
+                    <button type="submit" class="btn-primary" id="generate-btn">Generate Exam</button>
+                    <a href="/teacher/dashboard" class="btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Store courses data for JavaScript
+        const coursesData = [
+            {% for course in courses %}
+            {
+                course_number: "{{ course.course_number }}",
+                section: "{{ course.section }}",
+                quarter_year: "{{ course.quarter_year }}"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        function updateSections() {
+            const courseSelect = document.getElementById('course_number');
+            const sectionSelect = document.getElementById('section');
+            const quarterSelect = document.getElementById('quarter_year');
+            
+            const selectedCourse = courseSelect.value;
+            
+            // Clear sections and quarters
+            sectionSelect.innerHTML = '<option value="">Select Section</option>';
+            quarterSelect.innerHTML = '<option value="">Select Quarter/Year</option>';
+            
+            if (!selectedCourse) return;
+            
+            // Get unique sections and quarter/years for this course
+            const courseSections = new Set();
+            const quarterYears = new Set();
+            
+            coursesData.forEach(course => {
+                if (course.course_number === selectedCourse) {
+                    courseSections.add(course.section);
+                    quarterYears.add(course.quarter_year);
+                }
+            });
+            
+            // Populate sections
+            courseSections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = `Section ${section}`;
+                sectionSelect.appendChild(option);
+            });
+            
+            // Populate quarter/years
+            quarterYears.forEach(qy => {
+                const option = document.createElement('option');
+                option.value = qy;
+                option.textContent = qy;
+                quarterSelect.appendChild(option);
+            });
+        }
+
+        // Update sections when course changes
+        document.getElementById('course_number').addEventListener('change', updateSections);
+    </script>
+</body>
+</html>

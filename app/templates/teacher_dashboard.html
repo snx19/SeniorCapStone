@@ -230,7 +230,7 @@
                         <tbody>
                             {% for exam in open_exams %}
                             <tr>
-                                <td>{{ exam.exam_id }}</td>
+                                <td><a href="/teacher/exam/{{ exam.exam_id }}" style="color: #4CAF50; text-decoration: none;">{{ exam.exam_id }}</a></td>
                                 <td>{{ exam.student_id or 'N/A' }}</td>
                                 <td>{{ exam.first_name or 'N/A' }}</td>
                                 <td>{{ exam.last_name or 'N/A' }}</td>
