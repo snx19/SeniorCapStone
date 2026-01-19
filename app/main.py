@@ -88,13 +88,14 @@ async def teacher_dashboard(request: Request, db: Session = Depends(get_db)):
     # Query courses for this instructor from database
     courses = db.query(Course).filter(Course.instructor_id == user.id).all()
     
-    # Query open exams for this instructor (only published exams that students can take)
+    # Query open exams for this instructor (only published exams that students can take, not terminated)
     # Join with Student to get student info, then try to match with User
     open_exams_query = db.query(Exam).outerjoin(
         Student, Exam.student_id == Student.id
     ).filter(
         Exam.instructor_id == user.id,
-        Exam.date_published.isnot(None)  # Only published exams
+        Exam.date_published.isnot(None),  # Only published exams
+        Exam.status != "terminated"  # Not terminated
     ).order_by(Exam.date_published.desc())  # Show most recent first
     
     # Build exam data with student info
@@ -502,16 +503,17 @@ async def course_page(
     if not course:
         return RedirectResponse(url="/teacher/dashboard?error=course_not_found", status_code=302)
     
-    # Query open exams for this course/section (published and not completed)
+    # Query open exams for this course/section (published, not completed, not terminated)
     open_exams = db.query(Exam).filter(
         Exam.course_number == course_number.upper(),
         Exam.section == section,
         Exam.quarter_year == course.quarter_year,
         Exam.date_published.isnot(None),  # Must be published
-        Exam.status != "completed"  # Not completed
+        Exam.status != "completed",  # Not completed
+        Exam.status != "terminated"  # Not terminated
     ).order_by(Exam.date_published.desc()).all()
     
-    # Query closed exams for this course/section (completed or past end date)
+    # Query closed exams for this course/section (completed, terminated, or past end date)
     now = datetime.now(timezone.utc)
     closed_exams = db.query(Exam).filter(
         Exam.course_number == course_number.upper(),
@@ -519,9 +521,10 @@ async def course_page(
         Exam.quarter_year == course.quarter_year,
         or_(
             Exam.status == "completed",
+            Exam.status == "terminated",
             and_(Exam.date_end_availability.isnot(None), Exam.date_end_availability < now)
         )
-    ).order_by(Exam.completed_at.desc()).all()
+    ).order_by(Exam.date_end_availability.desc()).all()
     
     return render_template("course_page.html", {
         "request": request,
@@ -709,6 +712,50 @@ async def exam_details_page(
         "request": request,
         "exam": exam
     })
+
+@app.post("/teacher/exam/{exam_id}/terminate")
+async def terminate_exam(
+    request: Request,
+    exam_id: str,
+    db: Session = Depends(get_db)
+):
+    """Terminate exam so it's no longer available to students."""
+    # Get email from cookie
+    email = request.cookies.get("username")
+    if not email:
+        return RedirectResponse(url="/?error=login_required", status_code=302)
+    
+    # Get user from database
+    user = db.query(User).filter(User.email == email).first()
+    if not user or user.role != "teacher":
+        return RedirectResponse(url="/?error=login_required", status_code=302)
+    
+    # Get exam from database
+    exam = db.query(Exam).filter(Exam.exam_id == exam_id).first()
+    if not exam or exam.instructor_id != user.id:
+        return RedirectResponse(url="/teacher/dashboard?error=exam_not_found", status_code=302)
+    
+    # Get all related exams (same course, exam name, quarter) that are not terminated
+    related_exams = db.query(Exam).filter(
+        Exam.instructor_id == user.id,
+        Exam.course_number == exam.course_number,
+        Exam.exam_name == exam.exam_name,
+        Exam.quarter_year == exam.quarter_year,
+        Exam.status != "terminated"  # Only not yet terminated
+    ).all()
+    
+    # Terminate all related exams at once
+    now = datetime.now(timezone.utc)
+    for related_exam in related_exams:
+        related_exam.status = "terminated"
+        related_exam.date_end_availability = now  # Set end availability to now
+    
+    try:
+        db.commit()
+        return RedirectResponse(url=f"/teacher/dashboard?success=Exam terminated successfully", status_code=302)
+    except Exception as e:
+        db.rollback()
+        return RedirectResponse(url=f"/teacher/exam/{exam_id}?error=Error terminating exam: {str(e)}", status_code=302)
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):

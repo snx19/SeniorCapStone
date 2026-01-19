@@ -130,6 +130,21 @@
             white-space: pre-wrap;
             word-wrap: break-word;
         }
+
+        .btn-terminate {
+            background-color: #dc3545;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-terminate:hover {
+            background-color: #c82333;
+        }
     </style>
 </head>
 <body>
@@ -236,11 +251,21 @@
         </div>
         {% endif %}
 
-        {% if exam.final_explanation and exam.status != 'completed' %}
+        {% if exam.date_published and exam.status != 'terminated' %}
         <div class="details-section">
             <h2>Actions</h2>
-            <p style="color: #666; margin-bottom: 15px;">This exam is ready for review. You can generate questions or publish it for students.</p>
-            <!-- TODO: Add buttons for Generate Questions, Publish Exam, etc. -->
+            <form method="post" action="/teacher/exam/{{ exam.exam_id }}/terminate" 
+                  onsubmit="return confirm('Are you sure? After termination this exam will not be available to any students!');">
+                <button type="submit" class="btn-terminate">Terminate Exam</button>
+            </form>
+        </div>
+        {% endif %}
+        
+        {% if exam.status == 'terminated' %}
+        <div class="details-section">
+            <div style="padding: 15px; background: #fff3cd; border-radius: 4px; border-left: 4px solid #ffc107;">
+                <strong>This exam has been terminated.</strong> It is no longer available to students.
+            </div>
         </div>
         {% endif %}
     </div>
