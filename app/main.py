@@ -50,7 +50,7 @@ def render_template(template_name: str, context: dict) -> HTMLResponse:
 
 @app.get("/student/dashboard", response_class=HTMLResponse)
 async def student_dashboard(request: Request, db: Session = Depends(get_db)):
-    """Student dashboard page with personalized welcome."""
+    """Student dashboard page with personalized welcome, courses, and exams."""
     # Get email from cookie
     email = request.cookies.get("username")
     if not email:
@@ -64,11 +64,188 @@ async def student_dashboard(request: Request, db: Session = Depends(get_db)):
     # Use first_name if available, otherwise fallback to "Student"
     first_name = user.first_name if user.first_name else "Student"
     
+    # Get or create Student record
+    student_record = db.query(Student).filter(Student.username == user.email).first()
+    
+    # Get student's courses (unique course_number, section, quarter_year combinations from their exams)
+    student_courses = []
+    if student_record:
+        # Get distinct courses from exams the student has taken/started
+        from sqlalchemy import distinct, func
+        student_exams = db.query(
+            Exam.course_number,
+            Exam.section,
+            Exam.quarter_year
+        ).filter(
+            Exam.student_id == student_record.id
+        ).distinct().all()
+        
+        # Convert to list of dicts for template
+        seen_courses = set()
+        for exam in student_exams:
+            course_key = (exam.course_number, exam.section, exam.quarter_year)
+            if course_key not in seen_courses:
+                seen_courses.add(course_key)
+                # Get the Course record if it exists
+                course = db.query(Course).filter(
+                    Course.course_number == exam.course_number,
+                    Course.section == exam.section,
+                    Course.quarter_year == exam.quarter_year
+                ).first()
+                
+                student_courses.append({
+                    "course_number": exam.course_number,
+                    "section": exam.section,
+                    "quarter_year": exam.quarter_year,
+                    "course": course  # May be None if course was deleted
+                })
+    
+    # Get open exams available to the student (published, not terminated, template exams)
+    now = datetime.now(timezone.utc)
+    open_exams_query = db.query(Exam).filter(
+        Exam.date_published.isnot(None),  # Must be published
+        Exam.status != "terminated",  # Not terminated
+        Exam.student_id.is_(None)  # Only template exams (instructor-created)
+    ).order_by(Exam.date_published.desc())
+    
+    open_exams = open_exams_query.all()
+    
+    # Filter out exams student has already completed
+    available_open_exams = []
+    if student_record:
+        for exam in open_exams:
+            # Check if student has completed this exam
+            completed = db.query(Exam).filter(
+                Exam.course_number == exam.course_number,
+                Exam.section == exam.section,
+                Exam.exam_name == exam.exam_name,
+                Exam.quarter_year == exam.quarter_year,
+                Exam.student_id == student_record.id,
+                Exam.status == "completed"
+            ).first()
+            
+            if not completed:
+                # Get student name from exam if it's a student exam
+                available_open_exams.append({
+                    "exam_id": exam.exam_id,
+                    "course_number": exam.course_number,
+                    "section": exam.section,
+                    "exam_name": exam.exam_name,
+                    "quarter_year": exam.quarter_year,
+                    "instructor_name": exam.instructor_name,
+                    "status": "active" if exam.date_published else "not_started",
+                    "date_published": exam.date_published,
+                    "date_start": exam.date_start,
+                    "date_end": exam.date_end,
+                    "is_timed": exam.is_timed,
+                    "duration_hours": exam.duration_hours,
+                    "duration_minutes": exam.duration_minutes
+                })
+    else:
+        # No student record yet, show all open exams
+        for exam in open_exams:
+            available_open_exams.append({
+                "exam_id": exam.exam_id,
+                "course_number": exam.course_number,
+                "section": exam.section,
+                "exam_name": exam.exam_name,
+                "quarter_year": exam.quarter_year,
+                "instructor_name": exam.instructor_name,
+                "status": "active" if exam.date_published else "not_started",
+                "date_published": exam.date_published,
+                "date_start": exam.date_start,
+                "date_end": exam.date_end,
+                "is_timed": exam.is_timed,
+                "duration_hours": exam.duration_hours,
+                "duration_minutes": exam.duration_minutes
+            })
+    
+    # Get previous exams (completed by student or closed/terminated)
+    previous_exams = []
+    if student_record:
+        # Get all student exams (completed, in_progress on closed exams, etc.)
+        student_exams_all = db.query(Exam).filter(
+            Exam.student_id == student_record.id
+        ).order_by(Exam.completed_at.desc().nulls_last()).all()
+        
+        # Track which exams we've already added (by exam_id)
+        added_exam_ids = set()
+        
+        for exam in student_exams_all:
+            if exam.exam_id not in added_exam_ids:
+                added_exam_ids.add(exam.exam_id)
+                previous_exams.append({
+                    "exam_id": exam.exam_id,
+                    "course_number": exam.course_number,
+                    "section": exam.section,
+                    "exam_name": exam.exam_name,
+                    "quarter_year": exam.quarter_year,
+                    "instructor_name": exam.instructor_name,
+                    "status": exam.status,
+                    "final_grade": exam.final_grade,
+                    "completed_at": exam.completed_at,
+                    "date_published": exam.date_published,
+                    "date_start": exam.date_start,
+                    "date_end": exam.date_end
+                })
+        
+        # Get closed/terminated template exams that student may have seen but didn't complete
+        closed_template_exams = db.query(Exam).filter(
+            Exam.date_published.isnot(None),
+            or_(
+                Exam.status == "terminated",
+                and_(Exam.date_end_availability.isnot(None), Exam.date_end_availability < now)
+            ),
+            Exam.student_id.is_(None)  # Template exams
+        ).order_by(Exam.date_end_availability.desc().nulls_last()).all()
+        
+        # Add closed template exams that student didn't complete (but were available)
+        for exam in closed_template_exams:
+            # Check if we already added this exam (student completed it)
+            template_exam_id = exam.exam_id
+            if template_exam_id not in added_exam_ids:
+                # Check if student attempted but didn't complete it
+                student_attempt = db.query(Exam).filter(
+                    Exam.course_number == exam.course_number,
+                    Exam.section == exam.section,
+                    Exam.exam_name == exam.exam_name,
+                    Exam.quarter_year == exam.quarter_year,
+                    Exam.student_id == student_record.id
+                ).first()
+                
+                if student_attempt:
+                    # Student attempted but didn't complete - add it
+                    added_exam_ids.add(template_exam_id)
+                    previous_exams.append({
+                        "exam_id": template_exam_id,
+                        "course_number": exam.course_number,
+                        "section": exam.section,
+                        "exam_name": exam.exam_name,
+                        "quarter_year": exam.quarter_year,
+                        "instructor_name": exam.instructor_name,
+                        "status": "terminated" if exam.status == "terminated" else "closed",
+                        "final_grade": student_attempt.final_grade if student_attempt else None,
+                        "completed_at": student_attempt.completed_at if student_attempt else None,
+                        "date_published": exam.date_published,
+                        "date_start": exam.date_start,
+                        "date_end": exam.date_end,
+                        "date_end_availability": exam.date_end_availability
+                    })
+        
+        # Sort previous exams by completion date or end availability date
+        previous_exams.sort(key=lambda x: (
+            x["completed_at"] if x["completed_at"] else datetime.min.replace(tzinfo=timezone.utc),
+            x.get("date_end_availability") if x.get("date_end_availability") else datetime.min.replace(tzinfo=timezone.utc)
+        ), reverse=True)
+    
     error = request.query_params.get("error", "")
     
     return render_template("student_dashboard.html", {
         "request": request,
         "first_name": first_name,
+        "student_courses": student_courses,
+        "open_exams": available_open_exams,
+        "previous_exams": previous_exams,
         "error": error
     })
 
