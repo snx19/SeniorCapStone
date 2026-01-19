@@ -390,6 +390,35 @@
         // Update sections when course changes
         document.getElementById('course_number').addEventListener('change', updateSections);
         
+        // Toggle duration fields based on timed selection
+        function toggleDurationFields() {
+            const isTimedRadio = document.querySelector('input[name="is_timed"]:checked');
+            if (!isTimedRadio) return;
+            
+            const isTimed = isTimedRadio.value === 'yes';
+            const durationFields = document.getElementById('duration-fields');
+            if (durationFields) {
+                durationFields.style.display = isTimed ? 'block' : 'none';
+                
+                // Make duration required if timed
+                const hoursSelect = document.getElementById('duration_hours');
+                const minutesSelect = document.getElementById('duration_minutes');
+                if (hoursSelect) hoursSelect.required = isTimed;
+                if (minutesSelect) minutesSelect.required = isTimed;
+            }
+        }
+        
+        // Make function globally accessible
+        window.toggleDurationFields = toggleDurationFields;
+        
+        // Initialize duration fields visibility on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', toggleDurationFields);
+        } else {
+            // DOM already loaded
+            toggleDurationFields();
+        }
+        
         // Validate at least one section is selected on form submit
         document.getElementById('create-exam-form').addEventListener('submit', function(e) {
             console.log('Form submit event triggered');
@@ -400,6 +429,18 @@
                 e.preventDefault();
                 alert('Please select at least one section.');
                 return false;
+            }
+            
+            // Validate duration if timed
+            const isTimed = document.querySelector('input[name="is_timed"]:checked').value === 'yes';
+            if (isTimed) {
+                const hours = parseInt(document.getElementById('duration_hours').value) || 0;
+                const minutes = parseInt(document.getElementById('duration_minutes').value) || 0;
+                if (hours === 0 && minutes === 0) {
+                    e.preventDefault();
+                    alert('Please select a duration for the timed exam.');
+                    return false;
+                }
             }
             
             // Log form data being submitted
