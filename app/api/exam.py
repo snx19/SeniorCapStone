@@ -54,12 +54,19 @@ async def get_exam(request: Request, exam_id: int, db: Session = Depends(get_db)
     # Get exam status
     status = exam_service.get_exam_status(db, exam_id)
     
+    # Pass exam timing information for timer display
+    exam_end_time = None
+    if exam.is_timed and exam.date_end:
+        exam_end_time = exam.date_end.isoformat()
+    
     return render_template("question.html", {
         "request": request,
         "question": question,
         "exam_id": exam_id,
         "question_number": status["questions_completed"] + 1,
-        "total_questions": status["total_questions"]
+        "total_questions": status["total_questions"],
+        "is_timed": exam.is_timed,
+        "exam_end_time": exam_end_time
     })
 
 
