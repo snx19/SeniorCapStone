@@ -43,7 +43,7 @@ For each question, provide:
 CRITICAL: The "rubric" field MUST be a string, not a dictionary or object. Example:
 "rubric": "Grading criteria: (1) Understanding of concept - 25 points, (2) Application - 25 points, (3) Examples - 25 points, (4) Analysis - 25 points. Total: 100 points."
 
-DO NOT use: "rubric": {"Understanding": 25, "Application": 25}  ❌
+DO NOT use: "rubric": {{"Understanding": 25, "Application": 25}}  ❌
 USE INSTEAD: "rubric": "Understanding: 25 points, Application: 25 points"  ✅
 
 {guidance_section}
