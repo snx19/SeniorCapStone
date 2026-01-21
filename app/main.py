@@ -570,18 +570,24 @@ async def student_start_exam(
                 logger.info(f"Recalculated exam end time for existing exam: start={start_time}, duration={duration} (hours={exam.duration_hours}, minutes={exam.duration_minutes}), end={student_exam.date_end}")
                 db.commit()
             else:
-                # Verify date_end is reasonable (not more than 24 hours from start)
+                # Verify date_end is reasonable - recalculate if off by more than 30 minutes
                 start_time = student_exam.student_exam_start_time
                 expected_duration = timedelta(hours=exam.duration_hours, minutes=exam.duration_minutes)
                 expected_end = start_time + expected_duration
-                # If date_end is way off (more than 1 hour difference), recalculate
-                time_diff = abs((student_exam.date_end - expected_end).total_seconds())
-                if time_diff > 3600:
+                # If date_end is way off (more than 30 minutes difference), recalculate
+                time_diff_seconds = abs((student_exam.date_end - expected_end).total_seconds())
+                time_diff_hours = time_diff_seconds / 3600
+                
+                logger.info(f"Checking existing exam timing: start_time={start_time}, date_end={student_exam.date_end}, expected_end={expected_end}, template_duration={expected_duration} (hours={exam.duration_hours}, minutes={exam.duration_minutes}), time_diff={time_diff_hours:.2f} hours")
+                
+                if time_diff_seconds > 1800:  # More than 30 minutes off
                     duration = timedelta(hours=exam.duration_hours, minutes=exam.duration_minutes)
                     old_end = student_exam.date_end
                     student_exam.date_end = start_time + duration
-                    logger.warning(f"Fixed incorrect exam end time: old_end={old_end}, new_end={student_exam.date_end}, duration={duration} (hours={exam.duration_hours}, minutes={exam.duration_minutes}), time_diff={time_diff/3600:.2f} hours")
+                    logger.warning(f"Fixed incorrect exam end time: old_end={old_end}, new_end={student_exam.date_end}, duration={duration} (hours={exam.duration_hours}, minutes={exam.duration_minutes}), time_diff={time_diff_hours:.2f} hours")
                     db.commit()
+                else:
+                    logger.info(f"Exam end time is correct: {time_diff_hours:.2f} hours difference (within tolerance)")
         
         # Check if student exam has questions, if not generate them (safety check for incomplete generation)
         student_questions = QuestionRepository.get_by_exam(db, student_exam.id)
@@ -658,9 +664,13 @@ async def student_start_exam(
         
         # Calculate end time if timed
         if exam.is_timed and exam.duration_hours is not None and exam.duration_minutes is not None:
-            duration = timedelta(hours=exam.duration_hours, minutes=exam.duration_minutes)
+            # Use the template exam's duration values
+            duration_hours = exam.duration_hours
+            duration_minutes = exam.duration_minutes
+            duration = timedelta(hours=duration_hours, minutes=duration_minutes)
             new_student_exam.date_end = now + duration
-            logger.info(f"Setting exam end time: start={now}, duration={duration} (hours={exam.duration_hours}, minutes={exam.duration_minutes}), end={new_student_exam.date_end}")
+            logger.info(f"Creating new student exam - Template exam: duration_hours={exam.duration_hours}, duration_minutes={exam.duration_minutes}, is_timed={exam.is_timed}")
+            logger.info(f"Setting exam end time: start={now}, duration={duration} (hours={duration_hours}, minutes={duration_minutes}), end={new_student_exam.date_end}")
         
         try:
             db.add(new_student_exam)

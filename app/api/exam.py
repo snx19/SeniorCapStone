@@ -58,6 +58,13 @@ async def get_exam(request: Request, exam_id: int, db: Session = Depends(get_db)
     exam_end_time = None
     if exam.is_timed and exam.date_end:
         exam_end_time = exam.date_end.isoformat()
+        # Log for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Exam timing - exam_id={exam.id}, is_timed={exam.is_timed}, duration_hours={exam.duration_hours}, duration_minutes={exam.duration_minutes}, date_end={exam.date_end}, student_exam_start_time={exam.student_exam_start_time}")
+        if exam.student_exam_start_time and exam.date_end:
+            time_diff = (exam.date_end - exam.student_exam_start_time).total_seconds() / 3600
+            logger.info(f"Time difference: {time_diff:.2f} hours ({exam.duration_hours or 0}h {exam.duration_minutes or 0}m expected)")
     
     return render_template("question.html", {
         "request": request,
