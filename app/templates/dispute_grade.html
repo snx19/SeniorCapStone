@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispute Grade - AI Oral Exam Grader</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .dispute-form {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .dispute-info {
+            background: #fff3cd;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .dispute-info h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        .form-group textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+        }
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        .btn-warning {
+            background-color: #ff9800;
+            color: white;
+        }
+        .btn-warning:hover {
+            background-color: #f57c00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dispute-form">
+            <h1>Dispute Grade</h1>
+            
+            <div class="dispute-info">
+                <h3>Exam Information</h3>
+                <p><strong>Course:</strong> {{ exam.course_number }} - {{ exam.section }}</p>
+                <p><strong>Exam:</strong> {{ exam.exam_name }}</p>
+                <p><strong>Your Grade:</strong> {{ "%.1f"|format(exam.final_grade * 100) }}%</p>
+            </div>
+            
+            {% if error %}
+            <div class="error-message" style="color: red; margin-bottom: 20px; padding: 15px; background: #ffebee; border-radius: 6px;">
+                {{ error }}
+            </div>
+            {% endif %}
+            
+            <form method="post" action="/api/exam/{{ exam.id }}/dispute" class="dispute-form-content">
+                <div class="form-group">
+                    <label for="dispute_reason">Please explain why you are disputing this grade:</label>
+                    <textarea 
+                        id="dispute_reason" 
+                        name="dispute_reason" 
+                        required 
+                        placeholder="Provide a detailed explanation of why you believe your grade should be reconsidered. Include specific questions, answers, or feedback that you believe were graded incorrectly."
+                    ></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-warning">Submit Dispute</button>
+                    <a href="/api/exam/{{ exam.id }}/complete" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

@@ -147,6 +147,33 @@ class ExamService:
             )
         
         exam = ExamRepository.get(db, exam_id)
+        
+        # Create notification for instructor when exam is completed
+        if exam and exam.instructor_id:
+            from app.services.notification_service import NotificationService
+            notification_service = NotificationService()
+            
+            # Get student info for the notification
+            student_name = "Student"
+            if exam.student_id:
+                from app.db.models import Student, User
+                student = db.query(Student).filter(Student.id == exam.student_id).first()
+                if student:
+                    user = db.query(User).filter(User.email == student.username).first()
+                    if user:
+                        student_name = f"{user.first_name} {user.last_name}".strip() or student.username
+            
+            grade_percent = exam.final_grade * 100 if exam.final_grade else 0
+            notification_service.create_notification(
+                db=db,
+                user_id=exam.instructor_id,
+                notification_type="exam_complete",
+                title=f"Exam Completed: {exam.exam_name}",
+                message=f"{student_name} has completed the exam '{exam.exam_name}' for {exam.course_number} - Section {exam.section}. Final grade: {grade_percent:.1f}%",
+                related_exam_id=exam.id,
+                related_course_id=None
+            )
+        
         return exam
     
     def get_exam_status(self, db: Session, exam_id: int) -> dict:

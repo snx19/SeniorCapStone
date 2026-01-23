@@ -107,3 +107,72 @@ async def exam_complete(request: Request, exam_id: int, db: Session = Depends(ge
         "questions": questions
     })
 
+
+@router.get("/exam/{exam_id}/dispute", response_class=HTMLResponse)
+async def dispute_grade_page(request: Request, exam_id: int, db: Session = Depends(get_db)):
+    """Show dispute grade form."""
+    exam = ExamRepository.get(db, exam_id)
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+    
+    # Only allow dispute if exam is completed and has a grade
+    if exam.status != "completed" or exam.final_grade is None:
+        return RedirectResponse(url=f"/api/exam/{exam_id}/complete?error=Cannot dispute grade for this exam", status_code=302)
+    
+    # Check if already disputed
+    if exam.status == "disputed":
+        return RedirectResponse(url=f"/api/exam/{exam_id}/complete?error=This exam grade has already been disputed", status_code=302)
+    
+    error = request.query_params.get("error", "")
+    
+    return render_template("dispute_grade.html", {
+        "request": request,
+        "exam": exam,
+        "error": error
+    })
+
+
+@router.post("/exam/{exam_id}/dispute")
+async def submit_dispute(
+    request: Request,
+    exam_id: int,
+    dispute_reason: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Submit a grade dispute."""
+    from app.db.models import Exam, Notification, User
+    from app.services.notification_service import NotificationService
+    
+    exam = ExamRepository.get(db, exam_id)
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+    
+    # Only allow dispute if exam is completed and has a grade
+    if exam.status != "completed" or exam.final_grade is None:
+        return RedirectResponse(url=f"/api/exam/{exam_id}/dispute?error=Cannot dispute grade for this exam", status_code=302)
+    
+    # Check if already disputed
+    if exam.status == "disputed":
+        return RedirectResponse(url=f"/api/exam/{exam_id}/dispute?error=This exam grade has already been disputed", status_code=302)
+    
+    # Update exam status and store dispute reason
+    exam.status = "disputed"
+    exam.dispute_reason = dispute_reason
+    db.commit()
+    db.refresh(exam)
+    
+    # Create notification for instructor
+    if exam.instructor_id:
+        notification_service = NotificationService()
+        notification_service.create_notification(
+            db=db,
+            user_id=exam.instructor_id,
+            notification_type="grade_disputed",
+            title=f"Grade Dispute: {exam.course_number} - {exam.exam_name}",
+            message=f"A student has disputed their grade for {exam.exam_name} in {exam.course_number} - {exam.section}. Reason: {dispute_reason[:200]}...",
+            related_exam_id=exam.id,
+            related_course_id=None  # Could link to course if we have that relationship
+        )
+    
+    return RedirectResponse(url=f"/api/exam/{exam_id}/complete?success=Dispute submitted successfully", status_code=302)
+

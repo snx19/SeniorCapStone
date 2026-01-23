@@ -21,6 +21,7 @@ class User(Base):
     
     # Relationships
     courses = relationship("Course", back_populates="instructor")
+    notifications = relationship("Notification", foreign_keys="Notification.user_id")
     
 class Student(Base):
     """Student model."""
@@ -61,7 +62,8 @@ class Exam(Base):
     
     # Student exam session fields (existing)
     student_id = Column(Integer, ForeignKey("students.id"), nullable=True)  # Nullable for teacher-created exams
-    status = Column(String(50), default="in_progress")  # in_progress, completed, active, not_started
+    status = Column(String(50), default="in_progress")  # in_progress, completed, active, not_started, disputed
+    dispute_reason = Column(Text, nullable=True)  # Student's reason for disputing grade
     final_grade = Column(Float, nullable=True)
     final_explanation = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -128,4 +130,24 @@ class Enrollment(Base):
     __table_args__ = (
         UniqueConstraint('student_id', 'course_id', name='uq_student_course_enrollment'),
     )
+
+
+class Notification(Base):
+    """Notification model for students and instructors."""
+    __tablename__ = "notifications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # FK to User (student or instructor)
+    notification_type = Column(String(50), nullable=False)  # "exam_available", "exam_closed", "exam_complete", "grade_disputed"
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    related_exam_id = Column(Integer, ForeignKey("exams.id"), nullable=True)  # FK to Exam if related
+    related_course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)  # FK to Course if related
+    is_read = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User")
+    related_exam = relationship("Exam")
+    related_course = relationship("Course")
 

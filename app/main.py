@@ -237,6 +237,12 @@ async def student_dashboard(request: Request, db: Session = Depends(get_db)):
             normalize_datetime(x.get("date_end_availability"))
         ), reverse=True)
     
+    # Get notifications for the user
+    from app.services.notification_service import NotificationService
+    notification_service = NotificationService()
+    notifications = notification_service.get_user_notifications(db, user.id, unread_only=False, limit=10)
+    unread_count = notification_service.get_unread_count(db, user.id)
+    
     error = request.query_params.get("error", "")
     
     return render_template("student_dashboard.html", {
@@ -245,6 +251,8 @@ async def student_dashboard(request: Request, db: Session = Depends(get_db)):
         "student_courses": student_courses,
         "open_exams": available_open_exams,
         "previous_exams": previous_exams,
+        "notifications": notifications,
+        "unread_count": unread_count,
         "error": error
     })
 
@@ -847,12 +855,20 @@ async def teacher_dashboard(request: Request, db: Session = Depends(get_db)):
             "date_end_availability": exam.date_end_availability
         })
     
+    # Get notifications for the user
+    from app.services.notification_service import NotificationService
+    notification_service = NotificationService()
+    notifications = notification_service.get_user_notifications(db, user.id, unread_only=False, limit=10)
+    unread_count = notification_service.get_unread_count(db, user.id)
+    
     return render_template("teacher_dashboard.html", {
         "request": request,
         "first_name": first_name,
         "courses": courses,
         "open_exams": open_exams,
-        "closed_exams": closed_exams
+        "closed_exams": closed_exams,
+        "notifications": notifications,
+        "unread_count": unread_count
     })
 
 @app.get("/teacher/register-course", response_class=HTMLResponse)
@@ -1592,6 +1608,36 @@ async def publish_exam(
     
     try:
         db.commit()
+        
+        # Create notifications for enrolled students
+        from app.services.notification_service import NotificationService
+        notification_service = NotificationService()
+        
+        # Find the course for this exam
+        course = db.query(Course).filter(
+            Course.course_number == exam.course_number,
+            Course.section == exam.section,
+            Course.quarter_year == exam.quarter_year,
+            Course.instructor_id == user.id
+        ).first()
+        
+        if course:
+            # Get all enrolled students
+            enrollments = db.query(Enrollment).filter(Enrollment.course_id == course.id).all()
+            for enrollment in enrollments:
+                # Get student's user record
+                student_user = db.query(User).filter(User.email == enrollment.student.username).first()
+                if student_user:
+                    notification_service.create_notification(
+                        db=db,
+                        user_id=student_user.id,
+                        notification_type="exam_available",
+                        title=f"New Exam Available: {exam.exam_name}",
+                        message=f"A new exam '{exam.exam_name}' is now available for {exam.course_number} - Section {exam.section}.",
+                        related_exam_id=exam.id,
+                        related_course_id=course.id
+                    )
+        
         return RedirectResponse(url=f"/teacher/dashboard?success=Exam published successfully", status_code=302)
     except Exception as e:
         db.rollback()

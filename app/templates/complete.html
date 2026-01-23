@@ -11,6 +11,18 @@
         <div class="complete-card">
             <h1>Exam Complete!</h1>
             
+            {% if request.query_params.get("success") %}
+            <div class="success-message" style="background-color: #d4edda; color: #155724; padding: 12px 20px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #c3e6cb;">
+                {{ request.query_params.get("success") }}
+            </div>
+            {% endif %}
+            
+            {% if request.query_params.get("error") %}
+            <div class="error-message" style="background-color: #f8d7da; color: #721c24; padding: 12px 20px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
+                {{ request.query_params.get("error") }}
+            </div>
+            {% endif %}
+            
             <div class="final-grade-box">
                 {% if exam.final_grade is not none %}
                 <h2>Final Grade: {{ "%.1f"|format(exam.final_grade * 100) }}%</h2>
@@ -59,6 +71,11 @@
             
             <div class="actions">
                 <a href="/student/dashboard" class="btn btn-primary">Back to Dashboard</a>
+                {% if exam.status == "completed" and exam.final_grade is not none and exam.status != "disputed" %}
+                <a href="/api/exam/{{ exam.id }}/dispute" class="btn btn-warning" style="background-color: #ff9800; color: white; margin-left: 10px;">Dispute Grade</a>
+                {% elif exam.status == "disputed" %}
+                <span class="btn" style="background-color: #ff9800; color: white; margin-left: 10px; cursor: default;">Grade Disputed</span>
+                {% endif %}
                 <a href="/" class="btn btn-secondary">Logout</a>
             </div>
         </div>
