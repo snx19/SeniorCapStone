@@ -36,7 +36,11 @@ class EmailService:
         """
         # Check if email is configured
         if not self.settings.smtp_username or not self.settings.smtp_password or not self.settings.smtp_from_email:
-            logger.warning("Email not configured - SMTP credentials missing. Skipping email send.")
+            logger.warning(
+                f"Email not configured - SMTP credentials missing. "
+                f"Add SMTP_USERNAME, SMTP_PASSWORD, and SMTP_FROM_EMAIL to your .env file. "
+                f"Skipping email send to {to_email}."
+            )
             return False
         
         try:
@@ -64,8 +68,22 @@ class EmailService:
             logger.info(f"Email sent successfully to {to_email}: {subject}")
             return True
             
+        except smtplib.SMTPAuthenticationError as e:
+            logger.error(
+                f"SMTP Authentication failed. Check your SMTP_USERNAME and SMTP_PASSWORD in .env file. "
+                f"Error: {e}"
+            )
+            return False
+        except smtplib.SMTPException as e:
+            logger.error(f"SMTP error sending email to {to_email}: {e}")
+            return False
         except Exception as e:
-            logger.error(f"Error sending email to {to_email}: {e}", exc_info=True)
+            logger.error(
+                f"Error sending email to {to_email}: {e}. "
+                f"Check SMTP settings: host={self.settings.smtp_host}, port={self.settings.smtp_port}, "
+                f"use_tls={self.settings.smtp_use_tls}",
+                exc_info=True
+            )
             return False
     
     def send_dispute_notification(

@@ -207,13 +207,18 @@ async def submit_dispute(
             )
             
             # Send email
-            email_service.send_dispute_notification(
+            email_sent = email_service.send_dispute_notification(
                 to_email=instructor.email,
                 student_name=student_name,
                 course_number=exam.course_number,
                 exam_name=exam.exam_name,
                 exam_details_html=exam_details_html
             )
+            if not email_sent:
+                logger.warning(
+                    f"Failed to send dispute email to instructor {instructor.email} for exam {exam.exam_id}. "
+                    f"Check email configuration in .env file. In-app notification was still created."
+                )
     
     return RedirectResponse(url=f"/api/exam/{exam_id}/complete?success=Dispute submitted successfully", status_code=302)
 
