@@ -15,6 +15,7 @@
     />
     
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/bluevox.css">
     <style>
       :root {
         --page-text: rgba(255, 255, 255, 0.9);
@@ -421,7 +422,7 @@
             </div>
             
             {% if error %}
-            <div class="error-message">
+            <div class="bluevox-message bluevox-message-error">
                 {{ error }}
             </div>
             {% endif %}
@@ -463,6 +464,7 @@
                         type="text" 
                         id="exam_name" 
                         name="exam_name" 
+                        class="bluevox-input"
                         required 
                         placeholder="e.g. Midterm"
                         autocomplete="off"
@@ -477,6 +479,7 @@
                             type="text" 
                             id="exam_topic" 
                             name="exam_topic" 
+                            class="bluevox-input"
                             required 
                             placeholder="e.g. Data Structures and Algorithms"
                             autocomplete="off"
@@ -489,6 +492,7 @@
                             type="number" 
                             id="num_questions" 
                             name="num_questions" 
+                            class="bluevox-input"
                             required 
                             min="1" 
                             max="30"
@@ -546,14 +550,15 @@
                     <textarea 
                         id="llm_prompt" 
                         name="llm_prompt" 
+                        class="bluevox-textarea"
                         placeholder="Please enter rubric, grading criteria, specific sub-topics, questions you want included, expected answers, or any further expectations. The AI can create a good exam from just the topic, but additional details will result in a stronger, more tailored exam."
                     ></textarea>
                     <p class="info-text">Provide additional context such as: rubric, grading criteria, specific sub-topics, questions you want included, expected answers, or any other expectations. This is optional - the AI can create a good exam from just the topic, but more details will result in a better exam.</p>
                 </div>
                 
                 <div class="button-group">
-                    <a href="/teacher/dashboard" class="btn-secondary">Cancel</a>
-                    <button type="submit" class="btn-primary" id="generate-btn">Generate and Review</button>
+                    <a href="/teacher/dashboard" class="bluevox-btn bluevox-btn-secondary" style="text-align: center;">Cancel</a>
+                    <button type="submit" class="bluevox-btn" id="generate-btn" style="flex: 1;">Generate and Review</button>
                 </div>
             </form>
         </div>
