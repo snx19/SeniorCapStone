@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DePaul BlueVox — Login</title>
+    <title>DePaul BlueVox — Sign In</title>
     <link rel="icon" type="image/png" href="/static/assets/depaul-shield.png">
     
     <!-- UI font -->
@@ -302,6 +302,15 @@
         font-size: 12px; /* Reduced for zoom out */
       }
 
+      body.bluevox-login .hello-message {
+        margin-top: 8px;
+        margin-bottom: 4px;
+        font-size: 18px;
+        font-weight: 500;
+        color: rgba(170, 220, 255, 0.95);
+        text-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      }
+
       /* ===== Responsive ===== */
       @media (max-width: 820px) {
         body.bluevox-login .depaulLogo {
@@ -369,7 +378,7 @@
             </header>
 
             <div class="tagline">DePaul University's AI exam platform.</div>
-            <div class="login-type" style="margin-top: 8px; font-size: 18px; font-weight: 500; color: rgba(170, 220, 255, 0.9); text-shadow: 0 0 10px rgba(0, 0, 0, 0.2);">Student Login</div>
+            <div id="hello-message" class="hello-message" aria-live="polite" style="display: none;"></div>
 
             {% if error %}
             <div class="error-message-bluevox">
@@ -416,10 +425,58 @@
             </form>
 
             <footer class="footer">
-                <a class="instructor" href="/">Back to Role Selection</a>
                 <div>Don't have an account? <a href="/signup">Create one here</a></div>
             </footer>
         </section>
     </main>
+    <script>
+      (function () {
+        var emailInput = document.getElementById('email');
+        var helloEl = document.getElementById('hello-message');
+        var debounceTimer = null;
+        var lastCheckedEmail = '';
+
+        function showHello(data) {
+          if (!data.found) {
+            helloEl.style.display = 'none';
+            helloEl.textContent = '';
+            return;
+          }
+          var name = (data.first_name || '').trim() || 'there';
+          var roleLabel = data.role === 'teacher' ? 'Instructor' : 'Student';
+          helloEl.textContent = 'Hello, ' + name + '! Sign in as ' + roleLabel + '.';
+          helloEl.style.display = 'block';
+        }
+
+        function checkEmail() {
+          var email = (emailInput.value || '').trim().toLowerCase();
+          if (!email || email.indexOf('@') === -1) {
+            helloEl.style.display = 'none';
+            helloEl.textContent = '';
+            lastCheckedEmail = '';
+            return;
+          }
+          if (email === lastCheckedEmail) return;
+          lastCheckedEmail = email;
+
+          fetch('/api/lookup-email?email=' + encodeURIComponent(email))
+            .then(function (r) { return r.json(); })
+            .then(showHello)
+            .catch(function () {
+              helloEl.style.display = 'none';
+              helloEl.textContent = '';
+            });
+        }
+
+        emailInput.addEventListener('input', function () {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(checkEmail, 400);
+        });
+        emailInput.addEventListener('blur', function () {
+          clearTimeout(debounceTimer);
+          checkEmail();
+        });
+      })();
+    </script>
 </body>
 </html>

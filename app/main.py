@@ -2090,15 +2090,15 @@ async def remove_student_from_course(
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    """Root page - role selection."""
-    return render_template("login_selection.html", {"request": request})
-
-@app.get("/student/login", response_class=HTMLResponse)
-async def student_login_page(request: Request):
-    """Student login page."""
+    """Unified login page for students and instructors."""
     error = request.query_params.get("error", "")
     success = request.query_params.get("success", "")
     return render_template("login.html", {"request": request, "error": error, "success": success})
+
+@app.get("/student/login", response_class=RedirectResponse)
+async def student_login_redirect():
+    """Redirect to unified login."""
+    return RedirectResponse(url="/", status_code=302)
 
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_page(request: Request):
@@ -2106,12 +2106,10 @@ async def signup_page(request: Request):
     error = request.query_params.get("error", "")
     return render_template("signup.html", {"request": request, "error": error})
 
-@app.get("/teacher/login", response_class=HTMLResponse)
-async def teacher_login_page(request: Request):
-    """Teacher login page."""
-    error = request.query_params.get("error", "")
-    success = request.query_params.get("success", "")
-    return render_template("teacher_login.html", {"request": request, "error": error, "success": success})
+@app.get("/teacher/login", response_class=RedirectResponse)
+async def teacher_login_redirect():
+    """Redirect to unified login."""
+    return RedirectResponse(url="/", status_code=302)
 
 
 @app.get("/teacher/exams", response_class=HTMLResponse)

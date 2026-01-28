@@ -1,12 +1,30 @@
 """Authentication routes."""
-from fastapi import APIRouter, Depends, Request, Form
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends, Request, Form, Query
+from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from app.db.session import get_db
+from app.db.models import User
 from app.services.auth_service import authenticate_user, create_user
 from app.services.exam_service import ExamService
 
 router = APIRouter()
+
+
+@router.get("/lookup-email")
+async def lookup_email(
+    email: str = Query(..., min_length=1),
+    db: Session = Depends(get_db)
+):
+    """Return user first name and role if email is registered (for login page hello message)."""
+    email = email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return JSONResponse(content={"found": False})
+    return JSONResponse(content={
+        "found": True,
+        "first_name": user.first_name or "",
+        "role": user.role or "student",
+    })
 
 
 @router.post("/login")
@@ -21,16 +39,7 @@ async def login(
     # Check email/password
     user = authenticate_user(db, email, password)
     if not user:
-        # Invalid login → redirect to selection page with error
-        # Try to determine which login page they came from based on referer
-        referer = request.headers.get("referer", "")
-        if "/teacher/login" in referer:
-            return RedirectResponse(url="/teacher/login?error=invalid_login", status_code=302)
-        elif "/student/login" in referer:
-            return RedirectResponse(url="/student/login?error=invalid_login", status_code=302)
-        else:
-            # Default to selection page
-            return RedirectResponse(url="/?error=invalid_login", status_code=302)
+        return RedirectResponse(url="/?error=invalid_login", status_code=302)
     
     # If the user is a student, redirect to student dashboard
     if user.role == "student":
@@ -89,8 +98,5 @@ async def signup(
         # User already exists or creation failed
         return RedirectResponse(url="/signup?error=email_exists", status_code=302)
     
-    # Account created successfully - redirect to appropriate login page with success message
-    if role == "teacher":
-        return RedirectResponse(url="/teacher/login?success=account_created", status_code=302)
-    else:
-        return RedirectResponse(url="/student/login?success=account_created", status_code=302)
+    # Account created successfully - redirect to unified login page with success message
+    return RedirectResponse(url="/?success=account_created", status_code=302)
