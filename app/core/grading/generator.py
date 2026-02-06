@@ -286,14 +286,16 @@ IMPORTANT: Respond ONLY in English. Do NOT include any explanatory text before o
 
 Topic: {topic}
 Number of Questions: {num_questions}
-Difficulty Level: {difficulty}
 
-This will be a {difficulty} level exam. Generate questions appropriate for this academic level in depth, complexity, and expectations.
+★★★ HIGHEST PRIORITY - DIFFICULTY: {difficulty} ★★★
+Every question MUST be calibrated to {difficulty} level. Complexity, vocabulary, expected depth, and rubric criteria must all match this academic level. Do NOT default to intermediate—tailor explicitly to {difficulty}.
 {f'Additional Details: {additional_details}' if additional_details else ''}
 
 CRITICAL REQUIREMENTS:
 
-1. UNIQUENESS - Each question MUST be completely different:
+1. DIFFICULTY CALIBRATION - All questions must match {difficulty} (non-negotiable)
+
+2. UNIQUENESS - Each question MUST be completely different:
    - NO repeating the same concept in different words
    - NO asking about the same data structure/concept multiple times
    - Each question explores a DIFFERENT facet of the topic
@@ -301,17 +303,18 @@ CRITICAL REQUIREMENTS:
    - Example: If topic is "Data Structures", don't ask about hash tables twice
    - Instead: Ask about hash tables, then arrays, then trees, then graphs, etc.
 
-2. RUBRIC FORMAT - MUST be a STRING, not a dictionary:
+3. RUBRIC FORMAT - MUST be a STRING, not a dictionary:
    ✅ CORRECT: "rubric": "Grading: Understanding (25 points), Application (25 points), Examples (25 points), Analysis (25 points). Total: 100 points."
    ❌ WRONG: "rubric": {{"Understanding": 25, "Application": 25}}
    
-3. JSON FORMAT:
+4. JSON FORMAT:
    - Generate exactly {num_questions} questions
    - Number sequentially from 1 to {num_questions}
    - All fields must be strings (question_text, context, rubric)
    - Valid JSON only, no markdown code blocks
 
 BEFORE FINALIZING:
+- Verify ALL questions are calibrated to {difficulty} (complexity and expectations match)
 - Review all questions to ensure uniqueness
 - Verify all rubrics are strings
 - Check question numbers are sequential

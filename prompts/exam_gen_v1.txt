@@ -8,18 +8,27 @@ IMPORTANT:
 
 Topic: {topic}
 Number of Questions: {num_questions}
-Difficulty Level: {difficulty_level}
 
-This will be a {difficulty_level} level exam. Generate questions that are appropriate in depth, complexity, and expectations for students at this academic level.
+★★★ CRITICAL - DIFFICULTY LEVEL (HIGHEST PRIORITY): {difficulty_level} ★★★
+
+This is a {difficulty_level} level exam. The difficulty level is NON-NEGOTIABLE and must drive ALL question design:
+- HIGH SCHOOL: Basic definitions, simple applications, introductory concepts. Avoid advanced theory or proofs.
+- UNDERGRADUATE (Freshman/Sophomore): Foundational concepts, straightforward applications, moderate depth.
+- UNDERGRADUATE (Junior/Senior): Deeper analysis, synthesis of concepts, more complex problem-solving, some theory.
+- GRADUATE: Advanced theory, research-level thinking, critical analysis, nuanced comparisons.
+- PhD: Cutting-edge concepts, scholarly depth, original reasoning, expertise-level expectations.
+
+Calibrate EVERY question to {difficulty_level}: complexity, vocabulary, expected depth of answer, and rubric expectations must all match this level. Do NOT default to intermediate difficulty—explicitly tailor to {difficulty_level}.
 
 {additional_details_section}
 
 Your task is to generate {num_questions} unique, high-quality exam questions that:
-1. Test the student's understanding of the topic comprehensively
-2. Are appropriate for an oral exam format (encourage discussion and explanation)
-3. Vary in difficulty and cover DIFFERENT and DISTINCT aspects of the topic
-4. Are clear, well-structured, and thought-provoking
-5. Each question must be COMPLETELY UNIQUE - no two questions should:
+1. Are calibrated to {difficulty_level}—depth, complexity, and expectations must match this academic level (this is mandatory)
+2. Test the student's understanding of the topic comprehensively at the {difficulty_level} level
+3. Are appropriate for an oral exam format (encourage discussion and explanation)
+4. Cover DIFFERENT and DISTINCT aspects of the topic
+5. Are clear, well-structured, and thought-provoking
+6. Each question must be COMPLETELY UNIQUE - no two questions should:
    - Cover the same concept or sub-topic
    - Ask about the same thing in different words
    - Test the same knowledge or skill
@@ -86,9 +95,10 @@ Important:
 - Respond with valid JSON only, no additional text outside the JSON object
 
 FINAL CHECKLIST before responding:
-1. ✅ All {num_questions} questions are generated
-2. ✅ Each question tests a DIFFERENT concept/sub-topic
-3. ✅ No two questions are about the same thing
-4. ✅ All rubrics are STRINGS (not dictionaries)
-5. ✅ Questions are numbered 1 through {num_questions}
-6. ✅ JSON is valid and properly formatted
+1. ✅ All questions are calibrated to {difficulty_level} (complexity and expectations match this level)
+2. ✅ All {num_questions} questions are generated
+3. ✅ Each question tests a DIFFERENT concept/sub-topic
+4. ✅ No two questions are about the same thing
+5. ✅ All rubrics are STRINGS (not dictionaries)
+6. ✅ Questions are numbered 1 through {num_questions}
+7. ✅ JSON is valid and properly formatted
